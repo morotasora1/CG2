@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Windows.h>
 #include <d3d12.h>
 #include <dxgi1_6.h>
@@ -9,7 +10,7 @@
 using namespace DirectX;
 #include <d3dcompiler.h>
 #include <dinput.h>
-
+#include "KeyboardInfo.h"
 #define DIRECTINPUT_VERSION 0x0800
 
 #pragma comment(lib, "d3d12.lib")
@@ -19,12 +20,29 @@ using namespace DirectX;
 #pragma comment(lib,"dxguid.lib")
 
 
+#define DIRECTINPUT_VERSION 0x0800
+
 
 class Keyboard
 {
 public:
+	
 	Keyboard();
 	~Keyboard();
 
+	void Initialize(HWND hwnd);
+	/// 毎フレーム処理
+	/// </summary>
+
+	void Update(BYTE key[256], BYTE oldkey[256]);
+private:
+	
+	//キーボードデバイスの生成
+	
+	IDirectInput8* directInput = nullptr;
+	IDirectInputDevice8* keyboard = nullptr;
+	WNDCLASSEX w{};
 	HRESULT result;
+	
+
 };

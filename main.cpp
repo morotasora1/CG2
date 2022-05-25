@@ -8,7 +8,7 @@
 using namespace DirectX;
 #include <d3dcompiler.h>
 #include <dinput.h>
-
+#include "KeyboardInfo.h"
 #define DIRECTINPUT_VERSION 0x0800
 
 #pragma comment(lib, "d3d12.lib")
@@ -33,6 +33,7 @@ LRESULT WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 }
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
+	
 	// ウィンドウサイズ
 	const int window_width = 1280; // 横幅
 	const int window_height = 720; // 縦幅
@@ -84,6 +85,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ID3D12GraphicsCommandList* commandList = nullptr;
 	ID3D12CommandQueue* commandQueue = nullptr;
 	ID3D12DescriptorHeap* rtvHeap = nullptr;
+	Keyboard* keyboard = new Keyboard();
 
 	// DXGIファクトリーの生成
 	result = CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory));
@@ -202,26 +204,28 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	UINT64 fenceVal = 0;
 	result = device->CreateFence(fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 
-	//DirectInputの初期化
-	IDirectInput8* directInput = nullptr;
-	result = DirectInput8Create(
-		w.hInstance, DIRECTINPUT_VERSION, IID_IDirectInput8,
-		(void**)&directInput, nullptr);
-	assert(SUCCEEDED(result));
+	
+	keyboard->Initialize(hwnd);
+	//////DirectInputの初期化
+	//IDirectInput8* directInput = nullptr;
+	//result = DirectInput8Create(
+	//	w.hInstance, DIRECTINPUT_VERSION, IID_IDirectInput8,
+	//	(void**)&directInput, nullptr);
+	//assert(SUCCEEDED(result));
 
-	//キーボードデバイスの生成
-	IDirectInputDevice8* keyboard = nullptr;
-	result = directInput->CreateDevice(GUID_SysKeyboard, &keyboard, NULL);
-	assert(SUCCEEDED(result));
+	////////キーボードデバイスの生成
+	//IDirectInputDevice8* keyboard = nullptr;
+	//result = directInput->CreateDevice(GUID_SysKeyboard, &keyboard, NULL);
+	//assert(SUCCEEDED(result));
 
-	//入力データ形式のセット
-	result = keyboard->SetDataFormat(&c_dfDIKeyboard);
-	assert(SUCCEEDED(result));
+	////////入力データ形式のセット
+	//result = keyboard->SetDataFormat(&c_dfDIKeyboard);
+	//assert(SUCCEEDED(result));
 
-	//排他制御レベルのセット
-	result = keyboard->SetCooperativeLevel(
-		hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
-	assert(SUCCEEDED(result));
+	////////排他制御レベルのセット
+	//result = keyboard->SetCooperativeLevel(
+	//	hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
+	//assert(SUCCEEDED(result));
 
 	
 	// DirectX初期化処理 ここまで
@@ -451,11 +455,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(SUCCEEDED(result));
 	
 	//描画初期化処理ここまで
-	keyboard->Acquire();
-	BYTE key[256] = { 0 };
-	BYTE oldkey[256] = { 0 };
-	int isTriangleStrip = 0;
-	int isWireFrame = 0;
+	BYTE key[256] = {};
+	BYTE oldkey[256] = {};
 	// ゲームループ
 	while (true) {
 
@@ -469,14 +470,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			break;
 		}
 		// DirectX毎フレーム処理 ここから
-		
-		// 最新のキーボード情報だったものは1フレーム前のキーボード情報として保存
-		for (int i = 0; i < 256; i++)
-		{
-			oldkey[i] = key[i];
-		}
-		keyboard->GetDeviceState(sizeof(key), key);
-		
+		keyboard->Update(key, oldkey);
+
 		// バックバッファの番号を取得(2つなので0番か1番)
 		UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
 		// 1.リソースバリアで書き込み可能に変更
@@ -492,17 +487,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		rtvHandle.ptr += bbIndex * device->GetDescriptorHandleIncrementSize(rtvHeapDesc.Type);
 		commandList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
 
-
 		// 3.画面クリア R G B A
 		FLOAT clearColor[] = { 0.1f,0.25f, 0.5f,0.0f }; // 青っぽい色
 		commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-		if (key[DIK_SPACE] )
+		if (key[DIK_SPACE])
 		{
 			FLOAT clearColor[] = { 0.9f,0.0f, 0.3f,0.0f }; //色替え
 			commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-		} 
+		}
 
-	
+
 		// 4.描画コマンドここから
 		// ビューポート設定コマンド
 		D3D12_VIEWPORT viewport{};
@@ -512,7 +506,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		viewport.TopLeftY = -100;
 		viewport.MinDepth = 0.0f;
 		viewport.MaxDepth = 1.0f;
-		
+
 		// ビューポート設定コマンドを、コマンドリストに積む
 		commandList->RSSetViewports(1, &viewport);
 
@@ -522,15 +516,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		scissorRect.right = scissorRect.left + window_width; // 切り抜き座標右
 		scissorRect.top = 0; // 切り抜き座標上
 		scissorRect.bottom = scissorRect.top + window_height; // 切り抜き座標下
-	
+
 		// シザー矩形設定コマンドを、コマンドリストに積む
 		commandList->RSSetScissorRects(1, &scissorRect);
-	
+
 		// パイプラインステートとルートシグネチャの設定コマンド
 		commandList->SetPipelineState(pipelineState);
 		commandList->SetGraphicsRootSignature(rootSignature);
 
-		if (key[DIK_2] && oldkey[DIK_2] == 0)
+		/*if (key[DIK_2] && oldkey[DIK_2] == 0)
 		{
 			if (isWireFrame == 1)
 			{
@@ -542,34 +536,35 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 				isWireFrame = 1;
 			}
 
-		}
-		if (isWireFrame == 1)
+		}*/
+		/*if (isWireFrame == 1)
 		{
 			commandList->SetPipelineState(pipelineState2);
-		}
+		}*/
 
 		// プリミティブ形状の設定コマンド
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // 三角形リスト
 
 		//四角形
-		if (key[DIK_1] && oldkey[DIK_1] == 0)
-		{
-			if (isTriangleStrip == 1)
-			{
-				isTriangleStrip = 0;
-			}
+		//if (key[DIK_1])
+		//{
+		//	if (isTriangleStrip == 1)
+		//	{
+		//		isTriangleStrip = 0;
+		//	}
 
-			else if (isTriangleStrip == 0)
-			{
-				isTriangleStrip = 1;
-			}
+		//	else if (isTriangleStrip == 0)
+		//	{
+		//		isTriangleStrip = 1;
+		//	}
 
-		}
+		//	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP); // 四角形リスト
+		//}
 
-		if(isTriangleStrip == 1)
-		{
-			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP); // 四角形リスト
-		}
+		//if(isTriangleStrip == 1)
+		//{
+		//	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP); // 四角形リスト
+		//}
 
 		// 頂点バッファビューの設定コマンド
 		commandList->IASetVertexBuffers(0, 1, &vbView);
@@ -577,10 +572,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		// 描画コマンド
 		commandList->DrawInstanced(_countof(vertices), 1, 0, 0); // 全ての頂点を使って描画
 		//四角形の描画
-		if (key[DIK_1])
+		/*if (key[DIK_1])
 		{
 			commandList->DrawInstanced(4, 1, 0, 0);
-		}
+		}*/
 		
 		//三角形描画2
 		// ビューポート設定コマンド
@@ -693,7 +688,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		// DirectX毎フレーム処理 ここまで
 
 	}
-	// ウィンドウクラスを登録解除
+
 	UnregisterClass(w.lpszClassName, w.hInstance);
 
 
