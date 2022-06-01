@@ -34,7 +34,7 @@ public:
 	/// 毎フレーム処理
 	/// </summary>
 
-	void Update(BYTE key[256], BYTE oldkey[256]);
+	void Update(BYTE* key, BYTE* oldkey);
 private:
 	
 	//キーボードデバイスの生成
@@ -44,5 +44,4 @@ private:
 	WNDCLASSEX w{};
 	HRESULT result;
 	
-
 };

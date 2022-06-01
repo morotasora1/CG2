@@ -85,7 +85,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ID3D12GraphicsCommandList* commandList = nullptr;
 	ID3D12CommandQueue* commandQueue = nullptr;
 	ID3D12DescriptorHeap* rtvHeap = nullptr;
-	Keyboard* keyboard = new Keyboard();
+
+	Keyboard* input = new Keyboard();
 
 	// DXGIファクトリーの生成
 	result = CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory));
@@ -205,7 +206,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	result = device->CreateFence(fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 
 	
-	keyboard->Initialize(hwnd);
+	input->Initialize(hwnd);
 	//////DirectInputの初期化
 	//IDirectInput8* directInput = nullptr;
 	//result = DirectInput8Create(
@@ -232,11 +233,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	//描画初期化処理ここから
 	
+
 	//頂点データ
 	XMFLOAT3 vertices[] = {
 		{ -0.5f,-0.5f, 0.0f },
 		{ -0.5f,+0.5f, 0.0f },
 		{ +0.5f,-0.5f, 0.0f },
+		{ +0.5f,-0.5f, 0.0f },
+		{ -0.5f,+0.5f, 0.0f },
 		{ +0.5f,+0.5f, 0.0f },
 	};
 
@@ -455,6 +459,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(SUCCEEDED(result));
 	
 	//描画初期化処理ここまで
+
 	BYTE key[256] = {};
 	BYTE oldkey[256] = {};
 	// ゲームループ
@@ -470,7 +475,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			break;
 		}
 		// DirectX毎フレーム処理 ここから
-		keyboard->Update(key, oldkey);
+		
 
 		// バックバッファの番号を取得(2つなので0番か1番)
 		UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
@@ -490,6 +495,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		// 3.画面クリア R G B A
 		FLOAT clearColor[] = { 0.1f,0.25f, 0.5f,0.0f }; // 青っぽい色
 		commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+		input->Update(key,oldkey);
+
 		if (key[DIK_SPACE])
 		{
 			FLOAT clearColor[] = { 0.9f,0.0f, 0.3f,0.0f }; //色替え
@@ -502,8 +509,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		D3D12_VIEWPORT viewport{};
 		viewport.Width = window_width;
 		viewport.Height = window_height;
-		viewport.TopLeftX = -300;
-		viewport.TopLeftY = -100;
+		viewport.TopLeftX = 0;
+		viewport.TopLeftY = 0;
 		viewport.MinDepth = 0.0f;
 		viewport.MaxDepth = 1.0f;
 
@@ -543,7 +550,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		}*/
 
 		// プリミティブ形状の設定コマンド
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // 三角形リスト
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINESTRIP); // 三角形リスト
 
 		//四角形
 		//if (key[DIK_1])
@@ -571,86 +578,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 		// 描画コマンド
 		commandList->DrawInstanced(_countof(vertices), 1, 0, 0); // 全ての頂点を使って描画
-		//四角形の描画
-		/*if (key[DIK_1])
-		{
-			commandList->DrawInstanced(4, 1, 0, 0);
-		}*/
 		
-		//三角形描画2
-		// ビューポート設定コマンド
-		viewport.Width = window_width/2;
-		viewport.Height = window_height/2;
-		viewport.TopLeftX = 800;
-		viewport.TopLeftY = 400;
-		viewport.MinDepth = 0.0f;
-		viewport.MaxDepth = 1.0f;
-
-		// ビューポート設定コマンドを、コマンドリストに積む
-		commandList->RSSetViewports(1, &viewport);
-
-		//シザー矩形
-		scissorRect.left = 0; // 切り抜き座標左
-		scissorRect.right = scissorRect.left + window_width; // 切り抜き座標右
-		scissorRect.top = 0; // 切り抜き座標上
-		scissorRect.bottom = scissorRect.top + window_height; // 切り抜き座標下
-
-		// シザー矩形設定コマンドを、コマンドリストに積む
-		commandList->RSSetScissorRects(1, &scissorRect);
-
-		// 描画コマンド
-		commandList->DrawInstanced(_countof(vertices), 1, 0, 0); // 全ての頂点を使って描画
-
-		//三角形描画3
-		// ビューポート設定コマンド
-		viewport.Width = window_width / 2;
-		viewport.Height = window_height;
-		viewport.TopLeftX = 800;
-		viewport.TopLeftY = -100;
-		viewport.MinDepth = 0.0f;
-		viewport.MaxDepth = 1.0f;
-
-		// ビューポート設定コマンドを、コマンドリストに積む
-		commandList->RSSetViewports(1, &viewport);
-
-		//シザー矩形
-		scissorRect.left = 0; // 切り抜き座標左
-		scissorRect.right = scissorRect.left + window_width; // 切り抜き座標右
-		scissorRect.top = 0; // 切り抜き座標上
-		scissorRect.bottom = scissorRect.top + window_height; // 切り抜き座標下
-
-		// シザー矩形設定コマンドを、コマンドリストに積む
-		commandList->RSSetScissorRects(1, &scissorRect);
-
-		// 描画コマンド
-		commandList->DrawInstanced(_countof(vertices), 1, 0, 0); // 全ての頂点を使って描画
-
-		//三角形描画4
-		// ビューポート設定コマンド
-		viewport.Width = window_width ;
-		viewport.Height = window_height/4 ;
-		viewport.TopLeftX = -300;
-		viewport.TopLeftY = 500;
-		viewport.MinDepth = 0.0f;
-		viewport.MaxDepth = 1.0f;
-
-		// ビューポート設定コマンドを、コマンドリストに積む
-		commandList->RSSetViewports(1, &viewport);
-
-		//シザー矩形
-		scissorRect.left = 0; // 切り抜き座標左
-		scissorRect.right = scissorRect.left + window_width; // 切り抜き座標右
-		scissorRect.top = 0; // 切り抜き座標上
-		scissorRect.bottom = scissorRect.top + window_height; // 切り抜き座標下
-
-		// シザー矩形設定コマンドを、コマンドリストに積む
-		commandList->RSSetScissorRects(1, &scissorRect);
-
-
-		// 描画コマンド
-		commandList->DrawInstanced(_countof(vertices), 1, 0, 0); // 全ての頂点を使って描画
-
-
+		commandList->DrawInstanced(6, 1, 0, 0);
+		
+		
+		
 		// 4.描画コマンドここまで
 
 

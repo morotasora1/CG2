@@ -53,7 +53,7 @@ void Keyboard::Initialize(HWND hwnd)
 	
 }
 
-void Keyboard::Update(BYTE key[256], BYTE oldkey[256])
+void Keyboard::Update(BYTE* key, BYTE* oldkey)
 {
 	keyboard->Acquire();
 	for (int i = 0; i < 256; ++i)
@@ -63,5 +63,6 @@ void Keyboard::Update(BYTE key[256], BYTE oldkey[256])
 	keyboard->GetDeviceState(sizeof(key), key);
 
 
+	
 
 }
