@@ -62,6 +62,11 @@ void Keyboard::Update(BYTE* key, BYTE* oldkey)
 	}
 	keyboard->GetDeviceState(sizeof(key), key);
 
+	if (key[DIK_SPACE])
+	{
+		
+	}
+
 
 	
 
