@@ -53,8 +53,10 @@ void Keyboard::Initialize(HWND hwnd)
 	
 }
 
-void Keyboard::Update(BYTE* key, BYTE* oldkey)
+void Keyboard::Update()
 {
+	BYTE key[256] = {};
+	BYTE oldkey[256] = {};
 	keyboard->Acquire();
 	for (int i = 0; i < 256; ++i)
 	{

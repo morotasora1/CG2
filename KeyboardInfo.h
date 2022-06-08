@@ -34,7 +34,7 @@ public:
 	/// 毎フレーム処理
 	/// </summary>
 
-	void Update(BYTE* key, BYTE* oldkey);
+	void Update();
 private:
 	
 	//キーボードデバイスの生成

@@ -233,13 +233,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	//描画初期化処理ここから
 	
+	struct Vertex
+	{
+		XMFLOAT3 pos;
+		XMFLOAT2 uv;
+	};
 
 	//頂点データ
-	XMFLOAT3 vertices[] = {
-		{ -0.5f,-0.5f, 0.0f },
-		{ -0.5f,+0.5f, 0.0f },
-		{ +0.5f,-0.5f, 0.0f },
-		{ +0.5f,+0.5f, 0.0f },
+	Vertex vertices[] = {
+		{{ -0.4f,-0.7f, 0.0f },{0.0f,1.0f}},
+		{{ -0.4f,+0.7f, 0.0f },{0.0f,0.0f}},
+		{{ +0.4f,-0.7f, 0.0f },{1.0f,1.0f}},
+		{{ +0.4f,+0.7f, 0.0f },{1.0f,0.0f}},
 	};
 
 
@@ -250,7 +255,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	};
 
 	//頂点データ全体のサイズ = 頂点データ1つ分のサイズ
-	UINT sizeVB = static_cast<UINT>(sizeof(XMFLOAT3) * _countof(vertices));
+	UINT sizeVB = static_cast<UINT>(sizeof(vertices[0]) * _countof(vertices));
 
 	// 頂点バッファの設定
 	D3D12_HEAP_PROPERTIES heapProp{}; // ヒープ設定
@@ -301,7 +306,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		IID_PPV_ARGS(&indexBuff));
 
 	// GPU上のバッファに対応した仮想メモリ(メインメモリ上)を取得
-	XMFLOAT3* vertMap = nullptr;
+	Vertex* vertMap = nullptr;
 	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
 	assert(SUCCEEDED(result));
 	// 全頂点に対して
@@ -331,7 +336,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	// 頂点バッファのサイズ
 	vbView.SizeInBytes = sizeVB;
 	// 頂点1つ分のデータサイズ
-	vbView.StrideInBytes = sizeof(XMFLOAT3);
+	vbView.StrideInBytes = sizeof(vertices[0]);
 
 	// インデックバッファビューの作成
 	D3D12_INDEX_BUFFER_VIEW ibView{};
@@ -399,6 +404,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	D3D12_APPEND_ALIGNED_ELEMENT,
 	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
 	}, // (1行で書いたほうが見やすい)
+	{
+		"TEXCOORD",0,DXGI_FORMAT_R32G32_FLOAT,0,
+		D3D12_APPEND_ALIGNED_ELEMENT,
+		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+	},
 };
 
 
@@ -508,8 +518,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	
 	//描画初期化処理ここまで
 
-	BYTE key[256] = {};
-	BYTE oldkey[256] = {};
+	
 	// ゲームループ
 	while (true) {
 
@@ -543,13 +552,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		// 3.画面クリア R G B A
 		FLOAT clearColor[] = { 0.1f,0.25f, 0.5f,0.0f }; // 青っぽい色
 		commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-		input->Update(key,oldkey);
-
-		if (key[DIK_SPACE])
-		{
-			FLOAT clearColor[] = { 0.9f,0.0f, 0.3f,0.0f }; //色替え
-			commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-		}
+		input->Update();
 
 
 		// 4.描画コマンドここから
@@ -579,48 +582,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		commandList->SetPipelineState(pipelineState);
 		commandList->SetGraphicsRootSignature(rootSignature);
 
-		/*if (key[DIK_2] && oldkey[DIK_2] == 0)
-		{
-			if (isWireFrame == 1)
-			{
-				isWireFrame = 0;
-			}
 
-			else if (isWireFrame == 0)
-			{
-				isWireFrame = 1;
-			}
-
-		}*/
-		/*if (isWireFrame == 1)
-		{
-			commandList->SetPipelineState(pipelineState2);
-		}*/
 
 		// プリミティブ形状の設定コマンド
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // 三角形リスト
 
-		//四角形
-		//if (key[DIK_1])
-		//{
-		//	if (isTriangleStrip == 1)
-		//	{
-		//		isTriangleStrip = 0;
-		//	}
-
-		//	else if (isTriangleStrip == 0)
-		//	{
-		//		isTriangleStrip = 1;
-		//	}
-
-		//	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP); // 四角形リスト
-		//}
-
-		//if(isTriangleStrip == 1)
-		//{
-		//	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP); // 四角形リスト
-		//}
-
+		
 		// 頂点バッファビューの設定コマンド
 		commandList->IASetVertexBuffers(0, 1, &vbView);
 
