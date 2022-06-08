@@ -35,10 +35,13 @@ public:
 	/// </summary>
 
 	void Update();
+	int isSpace = 0;
 private:
 	
 	//キーボードデバイスの生成
 	
+	BYTE key[256] = {};
+	BYTE oldkey[256] = {};
 	IDirectInput8* directInput = nullptr;
 	IDirectInputDevice8* keyboard = nullptr;
 	WNDCLASSEX w{};
