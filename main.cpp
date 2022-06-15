@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <DirectXMath.h>
+#include "Vector3.h"
 using namespace DirectX;
 #include <d3dcompiler.h>
 #include <dinput.h>
@@ -207,27 +208,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	
 	input->Initialize(hwnd);
-	//////DirectInputの初期化
-	//IDirectInput8* directInput = nullptr;
-	//result = DirectInput8Create(
-	//	w.hInstance, DIRECTINPUT_VERSION, IID_IDirectInput8,
-	//	(void**)&directInput, nullptr);
-	//assert(SUCCEEDED(result));
-
-	////////キーボードデバイスの生成
-	//IDirectInputDevice8* keyboard = nullptr;
-	//result = directInput->CreateDevice(GUID_SysKeyboard, &keyboard, NULL);
-	//assert(SUCCEEDED(result));
-
-	////////入力データ形式のセット
-	//result = keyboard->SetDataFormat(&c_dfDIKeyboard);
-	//assert(SUCCEEDED(result));
-
-	////////排他制御レベルのセット
-	//result = keyboard->SetCooperativeLevel(
-	//	hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
-	//assert(SUCCEEDED(result));
-
 	
 	// DirectX初期化処理 ここまで
 
@@ -238,6 +218,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		XMFLOAT3 pos;
 		XMFLOAT2 uv;
 	};
+
+	struct ConstBufferDataMaterial
+	{
+		XMFLOAT4 color;
+	};
+
+	// ヒープ設定
+	D3D12_HEAP_PROPERTIES cbHeapProp{};
+	cbHeapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
+
+	// リソース設定
+	D3D12_RESOURCE_DESC cbResouceDesc{};
+	cbResouceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	cbResouceDesc.Width = (sizeof(ConstBufferDataMaterial) * 0xff) & ~0xff;
+	cbResouceDesc.Height = 1;
+	cbResouceDesc.DepthOrArraySize = 1;
+	cbResouceDesc.MipLevels = 1;
+	cbResouceDesc.SampleDesc.Count = 1;
+	cbResouceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
 	//頂点データ
 	Vertex vertices[] = {
@@ -270,7 +269,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	resDesc.SampleDesc.Count = 1;
 	resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
+	ID3D12Resource* constBuffMaterial = nullptr;
 
+	result = device->CreateCommittedResource(
+		&cbHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&cbResouceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&constBuffMaterial));
+	assert(SUCCEEDED(result));
+
+	//定数バッファのマッピング
+	ConstBufferDataMaterial* constMapMaterial = nullptr;
+	result = constBuffMaterial->Map(0, nullptr, (void**)&constMapMaterial);
+	assert(SUCCEEDED(result));
+
+	constMapMaterial->color = XMFLOAT4(1, 0, 0, 0.5f);
 	// 頂点バッファの生成
 	ID3D12Resource* vertBuff = nullptr;
 	result = device->CreateCommittedResource(
@@ -328,6 +343,87 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	// 繋がりを解除
 	indexBuff->Unmap(0, nullptr);
 
+
+
+	const size_t textureWidth = 256;
+	const size_t textureHeight = 256;
+	const size_t imageDataCount = textureWidth * textureHeight;
+
+	XMFLOAT4* imageData = new XMFLOAT4[imageDataCount];
+
+	//全ピクセルの色を初期化
+	for (size_t i = 0; i < imageDataCount; i++)
+	{
+		imageData[i].x = 1.0f;
+		imageData[i].y = 0.0f;
+		imageData[i].z = 0.0f;
+		imageData[i].w = 1.0f;
+	}
+
+	// ヒープ設定
+	D3D12_HEAP_PROPERTIES textureHeapProp{};
+	textureHeapProp.Type = D3D12_HEAP_TYPE_CUSTOM;
+	textureHeapProp.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;
+	textureHeapProp.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
+
+	// リソース設定
+	D3D12_RESOURCE_DESC textureResouceDesk{};
+	textureResouceDesk.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	textureResouceDesk.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	textureResouceDesk.Width = textureWidth;
+	textureResouceDesk.Height = textureHeight;
+	textureResouceDesk.DepthOrArraySize = 1;
+	textureResouceDesk.MipLevels = 1;
+	textureResouceDesk.SampleDesc.Count = 1;
+
+	//テクスチャバッファの生成
+	ID3D12Resource* texBuff = nullptr;
+	result = device->CreateCommittedResource(
+		&textureHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&textureResouceDesk,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&texBuff));
+
+
+	//テクスチャバッファにデータ転送
+	result = texBuff->WriteToSubresource(
+		0,
+		nullptr,
+		imageData,
+		sizeof(XMFLOAT4) * textureWidth,
+		sizeof(XMFLOAT4) * imageDataCount
+	);
+
+	//SRVの最大個数
+	const size_t kMaxSRVCount = 2056;
+
+	//デスクリプタヒープの設定
+	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	srvHeapDesc.NumDescriptors = kMaxSRVCount;
+
+	//設定を元にSRV用デスクリプタヒープを生成
+	ID3D12DescriptorHeap* srvHeap = nullptr;
+	result = device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&srvHeap));
+	assert(SUCCEEDED(result));
+
+	//SRVヒープの先頭ハンドルを取得
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = srvHeap->GetCPUDescriptorHandleForHeapStart();
+
+
+	//シェーダリソースビュー設定
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	srvDesc.Shader4ComponentMapping = 
+	D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+
+	//ハンドルの指す位置にシェーダリソースビュー作成
+	device->CreateShaderResourceView(texBuff, &srvDesc, srvHandle);
 
 	// 頂点バッファビューの作成
 	D3D12_VERTEX_BUFFER_VIEW vbView{};
@@ -487,11 +583,51 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	pipelineDesc2.SampleDesc.Count = 1; // 1ピクセルにつき1回サンプリング
 
 
+		//テクスチャサンプラーの設定
+	D3D12_STATIC_SAMPLER_DESC samplerDesc{};
+	samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	samplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+	samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+	samplerDesc.MinLOD = 0.0f;
+	samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+	samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+
+	//でスクリプタレンジの設定
+	D3D12_DESCRIPTOR_RANGE descriptorRange{};
+	descriptorRange.NumDescriptors = 1;
+	descriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	descriptorRange.BaseShaderRegister = 0;
+	descriptorRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+	//ルートパラメータの設定
+	D3D12_ROOT_PARAMETER rootParams[2] = {};
+
+	//定数バッファ0番
+	rootParams[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	rootParams[0].Descriptor.ShaderRegister = 0;
+	rootParams[0].Descriptor.RegisterSpace = 0;
+	rootParams[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	//デクスチャレンジスタ0番
+	rootParams[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParams[1].DescriptorTable.pDescriptorRanges = &descriptorRange;
+	rootParams[1].DescriptorTable.NumDescriptorRanges= 1;
+	rootParams[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+
 	// ルートシグネチャ
 	ID3D12RootSignature* rootSignature;
 	// ルートシグネチャの設定
 	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc{};
 	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	rootSignatureDesc.pParameters = rootParams;
+	rootSignatureDesc.NumParameters = _countof(rootParams);
+	rootSignatureDesc.pStaticSamplers = &samplerDesc;
+	rootSignatureDesc.NumStaticSamplers = 1;
 	// ルートシグネチャのシリアライズ
 	ID3DBlob* rootSigBlob = nullptr;
 	result = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0,
@@ -600,7 +736,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		commandList->DrawInstanced(6, 1, 0, 0);
 		
 		
-		
+		//定数バッファビュー(CBV)の設定コマンド
+		commandList->SetGraphicsRootConstantBufferView(0, constBuffMaterial->GetGPUVirtualAddress());
+
+		//SRVヒープの設定コマンド
+		commandList->SetDescriptorHeaps(1, &srvHeap);
+
+		//SRVヒープの先頭ハンドルを取得
+		D3D12_GPU_DESCRIPTOR_HANDLE srvGpuHandle = srvHeap->GetGPUDescriptorHandleForHeapStart();
+
+		//SRVヒープの先頭にあるSRVをルートパラメータ1番に設定
+		commandList->SetGraphicsRootDescriptorTable(1, srvGpuHandle);
+
+
 		// 4.描画コマンドここまで
 
 
@@ -641,7 +789,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	UnregisterClass(w.lpszClassName, w.hInstance);
 
-
+	delete[] imageData;
 	OutputDebugStringA("Hellow,DirectX!!\n");
 
 	return 0;
