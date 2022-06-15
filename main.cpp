@@ -730,12 +730,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		// インデックバッファビューの設定コマンド
 		commandList->IASetIndexBuffer(&ibView);
 
-		// 描画コマンド
-		commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0); // 全ての頂点を使って描画
-		
-		commandList->DrawInstanced(6, 1, 0, 0);
-		
-		
 		//定数バッファビュー(CBV)の設定コマンド
 		commandList->SetGraphicsRootConstantBufferView(0, constBuffMaterial->GetGPUVirtualAddress());
 
@@ -749,6 +743,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		commandList->SetGraphicsRootDescriptorTable(1, srvGpuHandle);
 
 
+
+		// 描画コマンド
+		commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0); // 全ての頂点を使って描画
+		
+		commandList->DrawInstanced(6, 1, 0, 0);
+		
+		commandList->DrawInstanced(_countof(vertices), 1, 0, 0);
+	
 		// 4.描画コマンドここまで
 
 
