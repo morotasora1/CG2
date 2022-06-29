@@ -10,6 +10,7 @@ using namespace DirectX;
 #include <d3dcompiler.h>
 #include <dinput.h>
 #include "KeyboardInfo.h"
+#include <DirectXTex.h>
 #define DIRECTINPUT_VERSION 0x0800
 
 #pragma comment(lib, "d3d12.lib")
@@ -34,7 +35,7 @@ LRESULT WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 }
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
-	
+
 	// ウィンドウサイズ
 	const int window_width = 1280; // 横幅
 	const int window_height = 720; // 縦幅
@@ -86,6 +87,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ID3D12GraphicsCommandList* commandList = nullptr;
 	ID3D12CommandQueue* commandQueue = nullptr;
 	ID3D12DescriptorHeap* rtvHeap = nullptr;
+
 
 	Keyboard* input = new Keyboard();
 
@@ -206,13 +208,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	UINT64 fenceVal = 0;
 	result = device->CreateFence(fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 
-	
+
 	input->Initialize(hwnd);
-	
+
 	// DirectX初期化処理 ここまで
 
 	//描画初期化処理ここから
-	
+
 	struct Vertex
 	{
 		XMFLOAT3 pos;
@@ -223,6 +225,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	{
 		XMFLOAT4 color;
 	};
+
+	struct  ConstBufferDataTransform
+	{
+		XMMATRIX mat;
+	};
+
 
 	// ヒープ設定
 	D3D12_HEAP_PROPERTIES cbHeapProp{};
@@ -238,12 +246,29 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	cbResouceDesc.SampleDesc.Count = 1;
 	cbResouceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
+
+	{
+		// ヒープ設定
+		D3D12_HEAP_PROPERTIES cbHeapProp{};
+		cbHeapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
+
+		// リソース設定
+		D3D12_RESOURCE_DESC cbResouceDesc{};
+		cbResouceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		cbResouceDesc.Width = (sizeof(ConstBufferDataTransform) * 0xff) & ~0xff;
+		cbResouceDesc.Height = 1;
+		cbResouceDesc.DepthOrArraySize = 1;
+		cbResouceDesc.MipLevels = 1;
+		cbResouceDesc.SampleDesc.Count = 1;
+		cbResouceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	}
+
 	//頂点データ
 	Vertex vertices[] = {
-		{{ -0.4f,-0.7f, 0.0f },{0.0f,1.0f}},
-		{{ -0.4f,+0.7f, 0.0f },{0.0f,0.0f}},
-		{{ +0.4f,-0.7f, 0.0f },{1.0f,1.0f}},
-		{{ +0.4f,+0.7f, 0.0f },{1.0f,0.0f}},
+		{{   0.0f, 100.0f, 0.0f },{0.0f,1.0f}},
+		{{   0.0f,   0.0f, 0.0f },{0.0f,0.0f}},
+		{{ 100.0f, 100.0f, 0.0f },{1.0f,1.0f}},
+		{{ 100.0f,   0.0f, 0.0f },{1.0f,0.0f}},
 	};
 
 
@@ -270,7 +295,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
 	ID3D12Resource* constBuffMaterial = nullptr;
-
+	//定数バッファの生成
 	result = device->CreateCommittedResource(
 		&cbHeapProp,
 		D3D12_HEAP_FLAG_NONE,
@@ -286,6 +311,32 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(SUCCEEDED(result));
 
 	constMapMaterial->color = XMFLOAT4(1, 0, 0, 0.5f);
+
+
+	//5-2
+	ID3D12Resource* constBuffTransform = nullptr;
+	//定数バッファの生成
+	result = device->CreateCommittedResource(
+		&cbHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&cbResouceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&constBuffTransform));
+	assert(SUCCEEDED(result));
+
+	//定数バッファのマッピング
+	ConstBufferDataTransform* constMapTransform = nullptr;
+	result = constBuffTransform->Map(0, nullptr, (void**)&constMapTransform);
+	assert(SUCCEEDED(result));
+
+	constMapTransform->mat = XMMatrixIdentity();
+	constMapTransform->mat.r[0].m128_f32[0] = 2.0f / window_width;
+	constMapTransform->mat.r[1].m128_f32[1] = -2.0f / window_height;
+	constMapTransform->mat.r[3].m128_f32[0] = -1.0f;
+	constMapTransform->mat.r[3].m128_f32[1] = 1.0f;
+
+
 	// 頂点バッファの生成
 	ID3D12Resource* vertBuff = nullptr;
 	result = device->CreateCommittedResource(
@@ -345,20 +396,27 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 
 
-	const size_t textureWidth = 256;
-	const size_t textureHeight = 256;
-	const size_t imageDataCount = textureWidth * textureHeight;
+	TexMetadata metadata{};
+	ScratchImage scratchImg{};
 
-	XMFLOAT4* imageData = new XMFLOAT4[imageDataCount];
+	result = LoadFromWICFile(
+		L"Resources/botan.png",
+		WIC_FLAGS_NONE,
+		&metadata, scratchImg);
 
-	//全ピクセルの色を初期化
-	for (size_t i = 0; i < imageDataCount; i++)
+	ScratchImage mipChain{};
+
+	result = GenerateMipMaps(
+		scratchImg.GetImages(), scratchImg.GetImageCount(), scratchImg.GetMetadata(),
+		TEX_FILTER_DEFAULT, 0, mipChain);
+
+	if (SUCCEEDED(result))
 	{
-		imageData[i].x = 1.0f;
-		imageData[i].y = 0.0f;
-		imageData[i].z = 0.0f;
-		imageData[i].w = 1.0f;
+		scratchImg = std::move(mipChain);
+		metadata = scratchImg.GetMetadata();
 	}
+
+	metadata.format = MakeSRGB(metadata.format);
 
 	// ヒープ設定
 	D3D12_HEAP_PROPERTIES textureHeapProp{};
@@ -369,11 +427,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	// リソース設定
 	D3D12_RESOURCE_DESC textureResouceDesk{};
 	textureResouceDesk.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	textureResouceDesk.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	textureResouceDesk.Width = textureWidth;
-	textureResouceDesk.Height = textureHeight;
-	textureResouceDesk.DepthOrArraySize = 1;
-	textureResouceDesk.MipLevels = 1;
+	textureResouceDesk.Format = metadata.format;
+	textureResouceDesk.Width = metadata.width;
+	textureResouceDesk.Height = (UINT)metadata.height;
+	textureResouceDesk.DepthOrArraySize = (UINT16)metadata.arraySize;
+	textureResouceDesk.MipLevels = (UINT16)metadata.mipLevels;
 	textureResouceDesk.SampleDesc.Count = 1;
 
 	//テクスチャバッファの生成
@@ -388,13 +446,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 
 	//テクスチャバッファにデータ転送
-	result = texBuff->WriteToSubresource(
-		0,
-		nullptr,
-		imageData,
-		sizeof(XMFLOAT4) * textureWidth,
-		sizeof(XMFLOAT4) * imageDataCount
-	);
+	for (size_t i = 0; i < metadata.mipLevels; i++)
+	{
+		const Image* img = scratchImg.GetImage(i, 0, 0);
+		result = texBuff->WriteToSubresource(
+			(UINT)i,
+			nullptr,
+			img->pixels,
+			(UINT)img->rowPitch,
+			(UINT)img->slicePitch
+		);
+		assert(SUCCEEDED(result));
+	}
 
 	//SRVの最大個数
 	const size_t kMaxSRVCount = 2056;
@@ -416,11 +479,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	//シェーダリソースビュー設定
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	srvDesc.Format = textureResouceDesk.Format;
 	srvDesc.Shader4ComponentMapping = 
 	D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.MipLevels = textureResouceDesk.MipLevels;
 
 	//ハンドルの指す位置にシェーダリソースビュー作成
 	device->CreateShaderResourceView(texBuff, &srvDesc, srvHandle);
@@ -604,7 +667,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	descriptorRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
 	//ルートパラメータの設定
-	D3D12_ROOT_PARAMETER rootParams[2] = {};
+	D3D12_ROOT_PARAMETER rootParams[3] = {};
 
 	//定数バッファ0番
 	rootParams[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -617,6 +680,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	rootParams[1].DescriptorTable.pDescriptorRanges = &descriptorRange;
 	rootParams[1].DescriptorTable.NumDescriptorRanges= 1;
 	rootParams[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	//定数バッファ1番
+	rootParams[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	rootParams[2].Descriptor.ShaderRegister = 1;
+	rootParams[2].Descriptor.RegisterSpace = 0;
+	rootParams[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 
 	// ルートシグネチャ
@@ -731,7 +800,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		commandList->IASetIndexBuffer(&ibView);
 
 		//定数バッファビュー(CBV)の設定コマンド
-		commandList->SetGraphicsRootConstantBufferView(0, constBuffMaterial->GetGPUVirtualAddress());
+		commandList->SetGraphicsRootConstantBufferView(2, constBuffTransform->GetGPUVirtualAddress());
 
 		//SRVヒープの設定コマンド
 		commandList->SetDescriptorHeaps(1, &srvHeap);
@@ -791,7 +860,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	UnregisterClass(w.lpszClassName, w.hInstance);
 
-	delete[] imageData;
+
 	OutputDebugStringA("Hellow,DirectX!!\n");
 
 	return 0;

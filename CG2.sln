@@ -7,22 +7,22 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CG2", "CG2.vcxproj", "{5FFB
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CFA134AE-C69E-4EC0-AD23-95DB17883130}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DirectXTex", "DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj", "{371B9FA9-4C90-4AC6-A123-ACED756D6C77}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
 		Release|x64 = Release|x64
-		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{5FFBCD35-D48D-4DDC-AF33-805095420828}.Debug|x64.ActiveCfg = Debug|x64
 		{5FFBCD35-D48D-4DDC-AF33-805095420828}.Debug|x64.Build.0 = Debug|x64
-		{5FFBCD35-D48D-4DDC-AF33-805095420828}.Debug|x86.ActiveCfg = Debug|Win32
-		{5FFBCD35-D48D-4DDC-AF33-805095420828}.Debug|x86.Build.0 = Debug|Win32
 		{5FFBCD35-D48D-4DDC-AF33-805095420828}.Release|x64.ActiveCfg = Release|x64
 		{5FFBCD35-D48D-4DDC-AF33-805095420828}.Release|x64.Build.0 = Release|x64
-		{5FFBCD35-D48D-4DDC-AF33-805095420828}.Release|x86.ActiveCfg = Release|Win32
-		{5FFBCD35-D48D-4DDC-AF33-805095420828}.Release|x86.Build.0 = Release|Win32
+		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Debug|x64.ActiveCfg = Debug|x64
+		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Debug|x64.Build.0 = Debug|x64
+		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Release|x64.ActiveCfg = Release|x64
+		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
