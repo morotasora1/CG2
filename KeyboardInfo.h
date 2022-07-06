@@ -33,15 +33,16 @@ public:
 	void Initialize(HWND hwnd);
 	/// 毎フレーム処理
 	/// </summary>
-
+	BYTE key[256] = {};
+	BYTE oldkey[256] = {};
 	void Update();
 	int isSpace = 0;
+	
 private:
 	
 	//キーボードデバイスの生成
 	
-	BYTE key[256] = {};
-	BYTE oldkey[256] = {};
+	
 	IDirectInput8* directInput = nullptr;
 	IDirectInputDevice8* keyboard = nullptr;
 	WNDCLASSEX w{};

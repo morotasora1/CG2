@@ -55,8 +55,7 @@ void Keyboard::Initialize(HWND hwnd)
 
 void Keyboard::Update()
 {
-	key[256] = {};
-	oldkey[256] = {};
+
 	keyboard->Acquire();
 	for (int i = 0; i < 256; ++i)
 	{
@@ -69,7 +68,7 @@ void Keyboard::Update()
 		isSpace = 1;
 	}
 
-
+	
 	
 
 }

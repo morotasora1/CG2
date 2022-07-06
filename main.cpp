@@ -87,7 +87,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ID3D12GraphicsCommandList* commandList = nullptr;
 	ID3D12CommandQueue* commandQueue = nullptr;
 	ID3D12DescriptorHeap* rtvHeap = nullptr;
-
+	
 
 	Keyboard* input = new Keyboard();
 
@@ -265,10 +265,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	//頂点データ
 	Vertex vertices[] = {
-		{{-50.0f, -50.0f,  50.0f },{0.0f,1.0f}},
-		{{-50.0f,  50.0f,  50.0f },{0.0f,0.0f}},
-		{{ 50.0f, -50.0f,  50.0f },{1.0f,1.0f}},
-		{{ 50.0f,  50.0f,  50.0f },{1.0f,0.0f}},
+		{{-50.0f, -50.0f,  0.0f },{0.0f,1.0f}},
+		{{-50.0f,  50.0f,  0.0f },{0.0f,0.0f}},
+		{{ 50.0f, -50.0f,  0.0f },{1.0f,1.0f}},
+		{{ 50.0f,  50.0f,  0.0f },{1.0f,0.0f}},
 	};
 
 
@@ -342,14 +342,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		2.0f, -2.0f,
 		0.0f, 1.0f);
 
-
+	//射影変換行列(透視投影)
 	XMMATRIX matProjection = XMMatrixPerspectiveFovLH(
 		XMConvertToRadians(45.0f),
 		(float)window_height / window_width,
 		0.1f, 1000.0f
 	);
 
-	constMapTransform->mat = matProjection;
+	//ビュー変換行列
+	XMMATRIX matview;
+	XMFLOAT3 eye(0, 0, -100);
+	XMFLOAT3 target(0, 0, 0);
+	XMFLOAT3 up(0, 1, 0);
+	float angle = 0.0f;//カメラの回転角
+	matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+
+	constMapTransform->mat = matview * matProjection;
 	/*
 		XMMATRIX newVer = XMMatrixOrthographicOffCenterLH(
 		2.0f, -2.0f,
@@ -746,7 +754,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	
 	// ゲームループ
 	while (true) {
-
+		input->Update();
 		// メッセージがある?
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg); // キー入力メッセージの処理
@@ -758,6 +766,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		}
 		// DirectX毎フレーム処理 ここから
 		
+		if (input->key[DIK_D] || input->key[DIK_A])
+		{
+			if(input->key[DIK_D]){
+				angle += XMConvertToRadians(1.0f);
+			}
+
+			else if (input->key[DIK_A]) {
+				angle -= XMConvertToRadians(1.0f); 
+			}
+
+			eye.x = -100 * sinf(angle);
+			eye.y = -100 * cosf(angle);
+			matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+		}
+		constMapTransform->mat = matview * matProjection;
 
 		// バックバッファの番号を取得(2つなので0番か1番)
 		UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
@@ -777,7 +800,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		// 3.画面クリア R G B A
 		FLOAT clearColor[] = { 0.1f,0.25f, 0.5f,0.0f }; // 青っぽい色
 		commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-		input->Update();
+	
 		
 
 		// 4.描画コマンドここから
