@@ -265,10 +265,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	//頂点データ
 	Vertex vertices[] = {
-		{{-50.0f, -50.0f,  0.0f },{0.0f,1.0f}},
-		{{-50.0f,  50.0f,  0.0f },{0.0f,0.0f}},
-		{{ 50.0f, -50.0f,  0.0f },{1.0f,1.0f}},
-		{{ 50.0f,  50.0f,  0.0f },{1.0f,0.0f}},
+		{{-20.0f, -20.0f,  0.0f },{0.0f,1.0f}},
+		{{-20.0f,  20.0f,  0.0f },{0.0f,0.0f}},
+		{{ 20.0f, -20.0f,  0.0f },{1.0f,1.0f}},
+		{{ 20.0f,  20.0f,  0.0f },{1.0f,0.0f}},
 	};
 
 
@@ -357,14 +357,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	float angle = 0.0f;//カメラの回転角
 	matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 
-	constMapTransform->mat = matview * matProjection;
-	/*
-		XMMATRIX newVer = XMMatrixOrthographicOffCenterLH(
-		2.0f, -2.0f,
-		2.0f, -2.0f,
-		0.0f, 1.0f);*/
 
+	
+	//座標
+	XMFLOAT3 scale;
+	XMFLOAT3 rotation;
+	XMFLOAT3 position;
 
+	scale = { 1.0f,1.0f,1.0f };
+	rotation = { 0.0f,0.0f,0.0f };
+	position = { 0.0f,0.0f,0.0f };
+	
 	// 頂点バッファの生成
 	ID3D12Resource* vertBuff = nullptr;
 	result = device->CreateCommittedResource(
@@ -766,6 +769,52 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		}
 		// DirectX毎フレーム処理 ここから
 		
+		//座標移動処理
+		if (input->key[DIK_UP] || input->key[DIK_DOWN] || input->key[DIK_RIGHT] || input->key[DIK_LEFT])
+		{
+			if (input->key[DIK_UP]) {
+				position.z += 1.0f;
+			}
+			else if (input->key[DIK_DOWN]) {
+				position.z -= 1.0f;
+			}
+
+			if (input->key[DIK_RIGHT]){
+				position.x += 1.0f;
+			}
+
+			else if (input->key[DIK_LEFT]) {
+				position.x -= 1.0f;
+			}
+		}
+
+		
+		//スケール
+		XMMATRIX matScale;
+		matScale = XMMatrixScaling(scale.x, scale.y, scale.z);
+		
+
+		//回転
+		XMMATRIX matRot;
+		matRot = XMMatrixIdentity();
+		matRot *= XMMatrixRotationZ(XMConvertToRadians(rotation.z));
+		matRot *= XMMatrixRotationX(XMConvertToRadians(rotation.x));
+		matRot *= XMMatrixRotationY(XMConvertToRadians(rotation.y));
+		
+
+		//平行移動
+		XMMATRIX matTrans;
+		matTrans = XMMatrixTranslation(position.x, position.y, position.z);
+		
+
+		//ワールド変換行列
+		XMMATRIX matWorld;
+		matWorld = XMMatrixIdentity();
+		matWorld *= matScale;
+		matWorld *= matRot;
+		matWorld *= matTrans;
+		
+		//カメラを回転
 		if (input->key[DIK_D] || input->key[DIK_A])
 		{
 			if(input->key[DIK_D]){
@@ -780,8 +829,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			eye.y = -100 * cosf(angle);
 			matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 		}
-		constMapTransform->mat = matview * matProjection;
-
+		
+		constMapTransform->mat = matWorld * matview * matProjection;
 		// バックバッファの番号を取得(2つなので0番か1番)
 		UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
 		// 1.リソースバリアで書き込み可能に変更
