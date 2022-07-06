@@ -265,10 +265,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	//頂点データ
 	Vertex vertices[] = {
-		{{   0.0f, 100.0f, 0.0f },{0.0f,1.0f}},
-		{{   0.0f,   0.0f, 0.0f },{0.0f,0.0f}},
-		{{ 100.0f, 100.0f, 0.0f },{1.0f,1.0f}},
-		{{ 100.0f,   0.0f, 0.0f },{1.0f,0.0f}},
+		{{-50.0f, -50.0f,  50.0f },{0.0f,1.0f}},
+		{{-50.0f,  50.0f,  50.0f },{0.0f,0.0f}},
+		{{ 50.0f, -50.0f,  50.0f },{1.0f,1.0f}},
+		{{ 50.0f,  50.0f,  50.0f },{1.0f,0.0f}},
 	};
 
 
@@ -329,12 +329,32 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ConstBufferDataTransform* constMapTransform = nullptr;
 	result = constBuffTransform->Map(0, nullptr, (void**)&constMapTransform);
 	assert(SUCCEEDED(result));
+	//constMapTransform->mat = XMMatrixIdentity();
+	XMMATRIX oldVer = XMMatrixIdentity();
+	
+	//constMapTransform->mat.r[0].m128_f32[0] = 2.0f / window_height ;
+	//constMapTransform->mat.r[1].m128_f32[1] = -2.0f / window_width;
+	/*constMapTransform->mat.r[3].m128_f32[0] = -1.0f;
+	constMapTransform->mat.r[3].m128_f32[1] = 1.0f;*/
 
-	constMapTransform->mat = XMMatrixIdentity();
-	constMapTransform->mat.r[0].m128_f32[0] = 2.0f / window_width;
-	constMapTransform->mat.r[1].m128_f32[1] = -2.0f / window_height;
-	constMapTransform->mat.r[3].m128_f32[0] = -1.0f;
-	constMapTransform->mat.r[3].m128_f32[1] = 1.0f;
+	constMapTransform->mat = XMMatrixOrthographicOffCenterLH(
+		2.0f, -2.0f,
+		2.0f, -2.0f,
+		0.0f, 1.0f);
+
+
+	XMMATRIX matProjection = XMMatrixPerspectiveFovLH(
+		XMConvertToRadians(45.0f),
+		(float)window_height / window_width,
+		0.1f, 1000.0f
+	);
+
+	constMapTransform->mat = matProjection;
+	/*
+		XMMATRIX newVer = XMMatrixOrthographicOffCenterLH(
+		2.0f, -2.0f,
+		2.0f, -2.0f,
+		0.0f, 1.0f);*/
 
 
 	// 頂点バッファの生成
