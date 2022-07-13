@@ -80,6 +80,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 #endif
 
 	// DirectX初期化処理 ここから
+#ifdef DEBUG
+	//デバックレイヤーをオンに
+	ID3D12Debug1* debugController;
+	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+	{
+		debugController->EnableDebugLayer();
+		debugController->SetEnableGPUBasedValidation(TRUE);
+	}
+#endif // DEBUG
+
 	HRESULT result;
 	ID3D12Device* device = nullptr;
 	IDXGIFactory7* dxgiFactory = nullptr;
@@ -267,40 +277,40 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//頂点データ
 	//前
 	Vertex vertices[] = {
-		{{-5.0f, -5.0f, 0.0f }, {0.0f,1.0f}},//左下
-		{{-5.0f,  5.0f, 0.0f }, {0.0f,0.0f}},//左上
-		{{ 5.0f, -5.0f, 0.0f }, {1.0f,1.0f}},//右下
-		{{ 5.0f,  5.0f, 0.0f }, {1.0f,0.0f}},//右上
+		{{-5.0f, -5.0f, 5.0f }, {0.0f,1.0f}},//左下
+		{{-5.0f,  5.0f, 5.0f }, {0.0f,0.0f}},//左上
+		{{ 5.0f, -5.0f, 5.0f }, {1.0f,1.0f}},//右下
+		{{ 5.0f,  5.0f, 5.0f }, {1.0f,0.0f}},//右上
 
 		////後
-		//{{-5.0f, -5.0f, 5.0f }, {0.0f,1.0f}},
-		//{{-5.0f,  5.0f, 5.0f }, {0.0f,0.0f}},
-		//{{ 5.0f, -5.0f, 5.0f }, {1.0f,1.0f}},
-		//{{ 5.0f,  5.0f, 5.0f }, {1.0f,0.0f}},
+		{{-5.0f, -5.0f, -5.0f }, {0.0f,1.0f}},
+		{{-5.0f,  5.0f, -5.0f }, {0.0f,0.0f}},
+		{{ 5.0f, -5.0f, -5.0f }, {1.0f,1.0f}},
+		{{ 5.0f,  5.0f, -5.0f }, {1.0f,0.0f}},
 
 		////左
-		//{{-5.0f, -5.0f,   5.0f },{0.0f,0.0f}},
-		//{{-5.0f, -5.0f,  -5.0f },{0.0f,1.0f}},
-		//{{-5.0f,  5.0f,   5.0f },{1.0f,0.0f}},
-		//{{-5.0f,  5.0f,  -5.0f },{1.0f,1.0f}},
+		{{-5.0f, -5.0f,   5.0f },{0.0f,1.0f}},
+		{{-5.0f, -5.0f,  -5.0f },{0.0f,0.0f}},
+		{{-5.0f,  5.0f,   5.0f },{1.0f,1.0f}},
+		{{-5.0f,  5.0f,  -5.0f },{1.0f,0.0f}},
 
 		//右
-		//{{ 5.0f, -5.0f,  -5.0f },{0.0f,1.0f}},
-		//{{ 5.0f, -5.0f,   5.0f },{0.0f,0.0f}},
-		//{{ 5.0f,  5.0f,  -5.0f },{1.0f,1.0f}},
-		//{{ 5.0f,  5.0f,   5.0f },{1.0f,0.0f}},
+		{{ 5.0f, -5.0f,  -5.0f },{0.0f,1.0f}},
+		{{ 5.0f, -5.0f,   5.0f },{0.0f,0.0f}},
+		{{ 5.0f,  5.0f,  -5.0f },{1.0f,1.0f}},
+		{{ 5.0f,  5.0f,   5.0f },{1.0f,0.0f}},
 
 		////下
-		//{{-5.0f, -5.0f,  5.0f },{0.0f,1.0f}},
-		//{{-5.0f, -5.0f,   -5.0f },{0.0f,0.0f}},
-		//{{ 5.0f, -5.0f,  5.0f },{1.0f,1.0f}},
-		//{{ 5.0f, -5.0f,   -5.0f },{1.0f,0.0f}},
+		{{-5.0f, -5.0f,  5.0f },{0.0f,1.0f}},
+		{{-5.0f, -5.0f, -5.0f },{0.0f,0.0f}},
+		{{ 5.0f, -5.0f,  5.0f },{1.0f,1.0f}},
+		{{ 5.0f, -5.0f, -5.0f },{1.0f,0.0f}},
 
 		////上
-		//{{-5.0f,  5.0f,  5.0f },{0.0f,1.0f}},
-		//{{-5.0f,  5.0f,   -5.0f },{0.0f,0.0f}},
-		//{{ 5.0f,  5.0f,  5.0f },{1.0f,1.0f}},
-		//{{ 5.0f,  5.0f,   -5.0f },{1.0f,0.0f}},
+		{{-5.0f,  5.0f,  5.0f },{0.0f,1.0f}},
+		{{-5.0f,  5.0f, -5.0f },{0.0f,0.0f}},
+		{{ 5.0f,  5.0f,  5.0f },{1.0f,1.0f}},
+		{{ 5.0f,  5.0f, -5.0f },{1.0f,0.0f}},
 	};
 
 	uint16_t indices[] =
@@ -310,24 +320,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		1,2,3,
 
 		////後
-		//4,5,6,
-		//5,6,7,
+		4,5,6,
+		5,6,7,
 
 		////左
-		/*8,9,10,
-		9,10,11,*/
+		8,9,10,
+		9,10,11,
 
 		//////右
-		//12,13,14,
-		//13,14,15,
+		12,13,14,
+		13,14,15,
 
 		//////下
-		//16,17,18,
-		//17,18,19,
+		16,17,18,
+		17,18,19,
 
 		//////上
-		//20,21,22,
-		//21,22,23,
+		20,21,22,
+		21,22,23,
 	};
 
 	//頂点データ全体のサイズ = 頂点データ1つ分のサイズ
@@ -560,6 +570,51 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = srvHeap->GetCPUDescriptorHandleForHeapStart();
 
 
+	//深度バッファのリソース設定
+	D3D12_RESOURCE_DESC depthResouceDesc{};
+	depthResouceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	depthResouceDesc.Width = window_width;
+	depthResouceDesc.Height = window_height;
+	depthResouceDesc.DepthOrArraySize = 1;
+	depthResouceDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	depthResouceDesc.SampleDesc.Count = 1;
+	depthResouceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	//深度値用ヒーププロパティ
+	D3D12_HEAP_PROPERTIES depthHeapProp{};
+	depthHeapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+	//深度値のクリア設定
+	D3D12_CLEAR_VALUE depthClearValue{};
+	depthClearValue.DepthStencil.Depth = 1.0f;
+	depthClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+
+	//深度バッファのリソース生成
+	ID3D12Resource* depthBuff = nullptr;
+	result = device->CreateCommittedResource(
+		&depthHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&depthResouceDesc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&depthClearValue,
+		IID_PPV_ARGS(&depthBuff));
+
+	//深度ビュー用デスクリプタヒープ作成
+	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesk{};
+	dsvHeapDesk.NumDescriptors = 1;
+	dsvHeapDesk.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	ID3D12DescriptorHeap* dsvHeap = nullptr;
+	result = device->CreateDescriptorHeap(&dsvHeapDesk, IID_PPV_ARGS(&dsvHeap));
+
+	//深度ビュー作成
+	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	device->CreateDepthStencilView(
+		depthBuff,
+		&dsvDesc,
+		dsvHeap->GetCPUDescriptorHandleForHeapStart());
+
 	//シェーダリソースビュー設定
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
 	srvDesc.Format = textureResouceDesk.Format;
@@ -590,6 +645,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ID3DBlob* vsBlob = nullptr; // 頂点シェーダオブジェクト
 	ID3DBlob* psBlob = nullptr; // ピクセルシェーダオブジェクト
 	ID3DBlob* errorBlob = nullptr; // エラーオブジェクト
+
 	// 頂点シェーダの読み込みとコンパイル
 	result = D3DCompileFromFile(
 		L"BasicVS.hlsl", // シェーダファイル名
@@ -599,20 +655,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, // デバッグ用設定
 		0,
 		&vsBlob, &errorBlob);
-
-	// エラーなら
-	if (FAILED(result)) {
-		// errorBlobからエラー内容をstring型にコピー
-		std::string error;
-		error.resize(errorBlob->GetBufferSize());
-		std::copy_n((char*)errorBlob->GetBufferPointer(),
-			errorBlob->GetBufferSize(),
-			error.begin());
-		error += "\n";
-		// エラー内容を出力ウィンドウに表示
-		OutputDebugStringA(error.c_str());
-		assert(0);
-	}
 
 	// ピクセルシェーダの読み込みとコンパイル
 	result = D3DCompileFromFile(
@@ -795,6 +837,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	pipelineDesc2.pRootSignature = rootSignature;
 
 
+
+	//デプスステンシルステートの設定
+	pipelineDesc.DepthStencilState.DepthEnable = true;
+	pipelineDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	pipelineDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	pipelineDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+
 	// パイプランステートの生成
 	ID3D12PipelineState* pipelineState = nullptr;
 	result = device->CreateGraphicsPipelineState(&pipelineDesc, IID_PPV_ARGS(&pipelineState));
@@ -803,6 +852,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ID3D12PipelineState* pipelineState2 = nullptr;
 	result = device->CreateGraphicsPipelineState(&pipelineDesc2, IID_PPV_ARGS(&pipelineState2));
 	assert(SUCCEEDED(result));
+
 
 	//描画初期化処理ここまで
 
@@ -834,57 +884,57 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			}
 
 			eye.x = -100 * sinf(angle);
-			eye.y = -100 * cosf(angle);
+			eye.z = -100 * cosf(angle);
 			matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 		}
-		constMapTransform->mat =matview * matProjection;
+
 
 		////座標移動処理
-		//if (input->key[DIK_UP] || input->key[DIK_DOWN] || input->key[DIK_RIGHT] || input->key[DIK_LEFT])
-		//{
-		//	if (input->key[DIK_UP]) {
-		//		position.z += 1.0f;
-		//	}
-		//	else if (input->key[DIK_DOWN]) {
-		//		position.z -= 1.0f;
-		//	}
+		if (input->key[DIK_UP] || input->key[DIK_DOWN] || input->key[DIK_RIGHT] || input->key[DIK_LEFT])
+		{
+			if (input->key[DIK_UP]) {
+				position.z += 1.0f;
+			}
+			else if (input->key[DIK_DOWN]) {
+				position.z -= 1.0f;
+			}
 
-		//	if (input->key[DIK_RIGHT]) {
-		//		position.x += 1.0f;
-		//	}
+			if (input->key[DIK_RIGHT]) {
+				position.x += 1.0f;
+			}
 
-		//	else if (input->key[DIK_LEFT]) {
-		//		position.x -= 1.0f;
-		//	}
-		//}
+			else if (input->key[DIK_LEFT]) {
+				position.x -= 1.0f;
+			}
+		}
 
 
 		////スケール
-		//XMMATRIX matScale;
-		//matScale = XMMatrixScaling(scale.x, scale.y, scale.z);
+		XMMATRIX matScale;
+		matScale = XMMatrixScaling(scale.x, scale.y, scale.z);
 
 
 		////回転
-		//XMMATRIX matRot;
-		//matRot = XMMatrixIdentity();
-		//matRot *= XMMatrixRotationZ(XMConvertToRadians(rotation.z));
-		//matRot *= XMMatrixRotationX(XMConvertToRadians(rotation.x));
-		//matRot *= XMMatrixRotationY(XMConvertToRadians(rotation.y));
+		XMMATRIX matRot;
+		matRot = XMMatrixIdentity();
+		matRot *= XMMatrixRotationZ(XMConvertToRadians(rotation.z));
+		matRot *= XMMatrixRotationX(XMConvertToRadians(rotation.x));
+		matRot *= XMMatrixRotationY(XMConvertToRadians(rotation.y));
 
 
 		////平行移動
-		//XMMATRIX matTrans;
-		//matTrans = XMMatrixTranslation(position.x, position.y, position.z);
+		XMMATRIX matTrans;
+		matTrans = XMMatrixTranslation(position.x, position.y, position.z);
 
 
 		////ワールド変換行列
-		//XMMATRIX matWorld;
-		//matWorld = XMMatrixIdentity();
-		//matWorld *= matScale;
-		//matWorld *= matRot;
-		//matWorld *= matTrans;
+		XMMATRIX matWorld;
+		matWorld = XMMatrixIdentity();
+		matWorld *= matScale;
+		matWorld *= matRot;
+		matWorld *= matTrans;
 
-		//constMapTransform->mat = matWorld * matview * matProjection;
+		constMapTransform->mat = matWorld * matview * matProjection;
 		// バックバッファの番号を取得(2つなので0番か1番)
 		UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
 		// 1.リソースバリアで書き込み可能に変更
@@ -898,11 +948,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		// レンダーターゲットビューのハンドルを取得
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
 		rtvHandle.ptr += bbIndex * device->GetDescriptorHandleIncrementSize(rtvHeapDesc.Type);
-		commandList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
+		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvHeap->GetCPUDescriptorHandleForHeapStart();
+		commandList->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle);
 
 		// 3.画面クリア R G B A
 		FLOAT clearColor[] = { 0.1f,0.25f, 0.5f,0.0f }; // 青っぽい色
 		commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+		commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 
 
@@ -961,10 +1013,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 		// 描画コマンド
 		commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0); // 全ての頂点を使って描画
-
-		commandList->DrawInstanced(6, 1, 0, 0);
-
-		commandList->DrawInstanced(_countof(vertices), 1, 0, 0);
 
 		// 4.描画コマンドここまで
 
