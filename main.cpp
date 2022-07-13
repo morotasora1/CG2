@@ -265,72 +265,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	//頂点データ
 	//前
-	Vertex vertices[] = {
-		{{-5.0f,  -5.0f,  -5.0f },{0.0f,1.0f}},//左下
-		{{-5.0f, 5.0f,  -5.0f },  {0.0f,0.0f}},//左上
-		{{ 5.0f,  -5.0f,  -5.0f },{1.0f,1.0f}},//右下
-		{{ 5.0f, 5.0f,  -5.0f },  {1.0f,0.0f}},//右上
+	XMFLOAT3 vertices[] = {
+		{-10.0f, -10.0f,  0.0f },//左下
+		{-10.0f, +10.0f,  0.0f }, //左上
+		{+10.0f, -10.0f,  0.0f },//右下
 		
-		//後
-		{{-5.0f, -5.0f,  25.0f },{0.0f,1.0f}},
-		{{-5.0f, 5.0f,  25.0f }, {0.0f,0.0f}},
-		{{ 5.0f, -5.0f,  25.0f },{1.0f,1.0f}},
-		{{ 5.0f, 5.0f,  25.0f }, {1.0f,0.0f}},
-
-		////左
-		//{{-5.0f, -5.0f,   5.0f },{0.0f,0.0f}},
-		//{{-5.0f, -5.0f,  -5.0f },{0.0f,1.0f}},
-		//{{-5.0f,  5.0f,   5.0f },{1.0f,0.0f}},
-		//{{-5.0f,  5.0f,  -5.0f },{1.0f,1.0f}},
-
-		//右
-		//{{ 5.0f, -5.0f,  -5.0f },{0.0f,1.0f}},
-		//{{ 5.0f, -5.0f,   5.0f },{0.0f,0.0f}},
-		//{{ 5.0f,  5.0f,  -5.0f },{1.0f,1.0f}},
-		//{{ 5.0f,  5.0f,   5.0f },{1.0f,0.0f}},
-
-		////下
-		//{{-5.0f, -5.0f,  5.0f },{0.0f,1.0f}},
-		//{{-5.0f, -5.0f,   -5.0f },{0.0f,0.0f}},
-		//{{ 5.0f, -5.0f,  5.0f },{1.0f,1.0f}},
-		//{{ 5.0f, -5.0f,   -5.0f },{1.0f,0.0f}},
-
-		////上
-		//{{-5.0f,  5.0f,  5.0f },{0.0f,1.0f}},
-		//{{-5.0f,  5.0f,   -5.0f },{0.0f,0.0f}},
-		//{{ 5.0f,  5.0f,  5.0f },{1.0f,1.0f}},
-		//{{ 5.0f,  5.0f,   -5.0f },{1.0f,0.0f}},
 	};
-
-	uint16_t indices[] =
-	{
-		//前
-		0,1,2,
-		1,2,3,
-
-		//後
-		/*4,5,6,
-		5,6,7,*/
-
-		////左
-		/*8,9,10,
-		9,10,11,*/
-
-		//////右
-		//12,13,14,
-		//13,14,15,
-
-		//////下
-		//16,17,18,
-		//17,18,19,
-
-		//////上
-		//20,21,22,
-		//21,22,23,
-	};
+	//uint16_t indices[] =
+	//{
+	//	//前
+	//	0,1,2,
+	//	1,2,3,
+	//};
 
 	//頂点データ全体のサイズ = 頂点データ1つ分のサイズ
-	UINT sizeVB = static_cast<UINT>(sizeof(vertices[0]) * _countof(vertices));
+	UINT sizeVB = static_cast<UINT>(sizeof(XMFLOAT3) * _countof(vertices));
 
 	// 頂点バッファの設定
 	D3D12_HEAP_PROPERTIES heapProp{}; // ヒープ設定
@@ -431,11 +380,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(SUCCEEDED(result));
 
 	//インデックスデータ全体のサイズ
-	UINT sizeIB = static_cast<UINT>(sizeof(uint16_t) * _countof(indices));
+	/*UINT sizeIB = static_cast<UINT>(sizeof(uint16_t) * _countof(indices));*/
 
 	// リソース設定
 	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	resDesc.Width = sizeIB; // 頂点データ全体のサイズ
+	//resDesc.Width = sizeIB; // 頂点データ全体のサイズ
 	resDesc.Height = 1;
 	resDesc.DepthOrArraySize = 1;
 	resDesc.MipLevels = 1;
@@ -454,7 +403,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		IID_PPV_ARGS(&indexBuff));
 
 	// GPU上のバッファに対応した仮想メモリ(メインメモリ上)を取得
-	Vertex* vertMap = nullptr;
+	XMFLOAT3* vertMap = nullptr;
 	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
 	assert(SUCCEEDED(result));
 	// 全頂点に対して
@@ -470,8 +419,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	uint16_t* indexMap = nullptr;
 	result = indexBuff->Map(0, nullptr, (void**)&indexMap);
 	// 全インデックスに対して
-	for (int i = 0; i < _countof(indices); i++) {
-		indexMap[i] = indices[i]; // 座標をコピー
+	for (int i = 0; i < _countof(vertices); i++) {
+		vertMap[i] = vertices[i]; // 座標をコピー
 	}
 	// 繋がりを解除
 	indexBuff->Unmap(0, nullptr);
@@ -577,13 +526,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	// 頂点バッファのサイズ
 	vbView.SizeInBytes = sizeVB;
 	// 頂点1つ分のデータサイズ
-	vbView.StrideInBytes = sizeof(vertices[0]);
+	vbView.StrideInBytes = sizeof(XMFLOAT3);
 
 	// インデックバッファビューの作成
 	D3D12_INDEX_BUFFER_VIEW ibView{};
 	ibView.BufferLocation = indexBuff->GetGPUVirtualAddress();
 	ibView.Format = DXGI_FORMAT_R16_UINT;
-	ibView.SizeInBytes = sizeIB;
+	//ibView.SizeInBytes = sizeIB;
 
 
 	ID3DBlob* vsBlob = nullptr; // 頂点シェーダオブジェクト
@@ -957,7 +906,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 
 		// 描画コマンド
-		commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0); // 全ての頂点を使って描画
+		//commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0); // 全ての頂点を使って描画
 		
 		commandList->DrawInstanced(6, 1, 0, 0);
 		
