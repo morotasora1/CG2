@@ -267,16 +267,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//頂点データ
 	//前
 	Vertex vertices[] = {
-		{{-5.0f, -5.0f, -5.0f }, {0.0f,1.0f}},//左下
-		{{-5.0f,  5.0f, -5.0f }, {0.0f,0.0f}},//左上
-		{{ 5.0f, -5.0f, -5.0f }, {1.0f,1.0f}},//右下
-		{{ 5.0f,  5.0f, -5.0f }, {1.0f,0.0f}},//右上
+		{{-5.0f, -5.0f, 0.0f }, {0.0f,1.0f}},//左下
+		{{-5.0f,  5.0f, 0.0f }, {0.0f,0.0f}},//左上
+		{{ 5.0f, -5.0f, 0.0f }, {1.0f,1.0f}},//右下
+		{{ 5.0f,  5.0f, 0.0f }, {1.0f,0.0f}},//右上
 
-		//後
-		{{-5.0f, -5.0f, 5.0f }, {0.0f,1.0f}},
-		{{-5.0f,  5.0f, 5.0f }, {0.0f,0.0f}},
-		{{ 5.0f, -5.0f, 5.0f }, {1.0f,1.0f}},
-		{{ 5.0f,  5.0f, 5.0f }, {1.0f,0.0f}},
+		////後
+		//{{-5.0f, -5.0f, 5.0f }, {0.0f,1.0f}},
+		//{{-5.0f,  5.0f, 5.0f }, {0.0f,0.0f}},
+		//{{ 5.0f, -5.0f, 5.0f }, {1.0f,1.0f}},
+		//{{ 5.0f,  5.0f, 5.0f }, {1.0f,0.0f}},
 
 		////左
 		//{{-5.0f, -5.0f,   5.0f },{0.0f,0.0f}},
@@ -309,9 +309,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		0,1,2,
 		1,2,3,
 
-		//後
-		4,5,6,
-		5,6,7,
+		////後
+		//4,5,6,
+		//5,6,7,
 
 		////左
 		/*8,9,10,
@@ -821,50 +821,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		}
 		// DirectX毎フレーム処理 ここから
 
-		//座標移動処理
-		if (input->key[DIK_UP] || input->key[DIK_DOWN] || input->key[DIK_RIGHT] || input->key[DIK_LEFT])
-		{
-			if (input->key[DIK_UP]) {
-				position.z += 1.0f;
-			}
-			else if (input->key[DIK_DOWN]) {
-				position.z -= 1.0f;
-			}
-
-			if (input->key[DIK_RIGHT]) {
-				position.x += 1.0f;
-			}
-
-			else if (input->key[DIK_LEFT]) {
-				position.x -= 1.0f;
-			}
-		}
-
-
-		//スケール
-		XMMATRIX matScale;
-		matScale = XMMatrixScaling(scale.x, scale.y, scale.z);
-
-
-		//回転
-		XMMATRIX matRot;
-		matRot = XMMatrixIdentity();
-		matRot *= XMMatrixRotationZ(XMConvertToRadians(rotation.z));
-		matRot *= XMMatrixRotationX(XMConvertToRadians(rotation.x));
-		matRot *= XMMatrixRotationY(XMConvertToRadians(rotation.y));
-
-
-		//平行移動
-		XMMATRIX matTrans;
-		matTrans = XMMatrixTranslation(position.x, position.y, position.z);
-
-
-		//ワールド変換行列
-		XMMATRIX matWorld;
-		matWorld = XMMatrixIdentity();
-		matWorld *= matScale;
-		matWorld *= matRot;
-		matWorld *= matTrans;
 
 		//カメラを回転
 		if (input->key[DIK_D] || input->key[DIK_A])
@@ -881,8 +837,54 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			eye.y = -100 * cosf(angle);
 			matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 		}
+		constMapTransform->mat =matview * matProjection;
 
-		constMapTransform->mat = matWorld * matview * matProjection;
+		////座標移動処理
+		//if (input->key[DIK_UP] || input->key[DIK_DOWN] || input->key[DIK_RIGHT] || input->key[DIK_LEFT])
+		//{
+		//	if (input->key[DIK_UP]) {
+		//		position.z += 1.0f;
+		//	}
+		//	else if (input->key[DIK_DOWN]) {
+		//		position.z -= 1.0f;
+		//	}
+
+		//	if (input->key[DIK_RIGHT]) {
+		//		position.x += 1.0f;
+		//	}
+
+		//	else if (input->key[DIK_LEFT]) {
+		//		position.x -= 1.0f;
+		//	}
+		//}
+
+
+		////スケール
+		//XMMATRIX matScale;
+		//matScale = XMMatrixScaling(scale.x, scale.y, scale.z);
+
+
+		////回転
+		//XMMATRIX matRot;
+		//matRot = XMMatrixIdentity();
+		//matRot *= XMMatrixRotationZ(XMConvertToRadians(rotation.z));
+		//matRot *= XMMatrixRotationX(XMConvertToRadians(rotation.x));
+		//matRot *= XMMatrixRotationY(XMConvertToRadians(rotation.y));
+
+
+		////平行移動
+		//XMMATRIX matTrans;
+		//matTrans = XMMatrixTranslation(position.x, position.y, position.z);
+
+
+		////ワールド変換行列
+		//XMMATRIX matWorld;
+		//matWorld = XMMatrixIdentity();
+		//matWorld *= matScale;
+		//matWorld *= matRot;
+		//matWorld *= matTrans;
+
+		//constMapTransform->mat = matWorld * matview * matProjection;
 		// バックバッファの番号を取得(2つなので0番か1番)
 		UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
 		// 1.リソースバリアで書き込み可能に変更
