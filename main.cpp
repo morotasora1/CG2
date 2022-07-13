@@ -1,4 +1,5 @@
-﻿#include <Windows.h>
+﻿
+#include <Windows.h>
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <cassert>
@@ -87,7 +88,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ID3D12GraphicsCommandList* commandList = nullptr;
 	ID3D12CommandQueue* commandQueue = nullptr;
 	ID3D12DescriptorHeap* rtvHeap = nullptr;
-	
+
 
 	Keyboard* input = new Keyboard();
 
@@ -265,21 +266,72 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	//頂点データ
 	//前
-	XMFLOAT3 vertices[] = {
-		{-10.0f, -10.0f,  0.0f },//左下
-		{-10.0f, +10.0f,  0.0f }, //左上
-		{+10.0f, -10.0f,  0.0f },//右下
-		
+	Vertex vertices[] = {
+		{{-5.0f, -5.0f, -5.0f }, {0.0f,1.0f}},//左下
+		{{-5.0f,  5.0f, -5.0f }, {0.0f,0.0f}},//左上
+		{{ 5.0f, -5.0f, -5.0f }, {1.0f,1.0f}},//右下
+		{{ 5.0f,  5.0f, -5.0f }, {1.0f,0.0f}},//右上
+
+		//後
+		{{-5.0f, -5.0f, 5.0f }, {0.0f,1.0f}},
+		{{-5.0f,  5.0f, 5.0f }, {0.0f,0.0f}},
+		{{ 5.0f, -5.0f, 5.0f }, {1.0f,1.0f}},
+		{{ 5.0f,  5.0f, 5.0f }, {1.0f,0.0f}},
+
+		////左
+		//{{-5.0f, -5.0f,   5.0f },{0.0f,0.0f}},
+		//{{-5.0f, -5.0f,  -5.0f },{0.0f,1.0f}},
+		//{{-5.0f,  5.0f,   5.0f },{1.0f,0.0f}},
+		//{{-5.0f,  5.0f,  -5.0f },{1.0f,1.0f}},
+
+		//右
+		//{{ 5.0f, -5.0f,  -5.0f },{0.0f,1.0f}},
+		//{{ 5.0f, -5.0f,   5.0f },{0.0f,0.0f}},
+		//{{ 5.0f,  5.0f,  -5.0f },{1.0f,1.0f}},
+		//{{ 5.0f,  5.0f,   5.0f },{1.0f,0.0f}},
+
+		////下
+		//{{-5.0f, -5.0f,  5.0f },{0.0f,1.0f}},
+		//{{-5.0f, -5.0f,   -5.0f },{0.0f,0.0f}},
+		//{{ 5.0f, -5.0f,  5.0f },{1.0f,1.0f}},
+		//{{ 5.0f, -5.0f,   -5.0f },{1.0f,0.0f}},
+
+		////上
+		//{{-5.0f,  5.0f,  5.0f },{0.0f,1.0f}},
+		//{{-5.0f,  5.0f,   -5.0f },{0.0f,0.0f}},
+		//{{ 5.0f,  5.0f,  5.0f },{1.0f,1.0f}},
+		//{{ 5.0f,  5.0f,   -5.0f },{1.0f,0.0f}},
 	};
-	//uint16_t indices[] =
-	//{
-	//	//前
-	//	0,1,2,
-	//	1,2,3,
-	//};
+
+	uint16_t indices[] =
+	{
+		//前
+		0,1,2,
+		1,2,3,
+
+		//後
+		4,5,6,
+		5,6,7,
+
+		////左
+		/*8,9,10,
+		9,10,11,*/
+
+		//////右
+		//12,13,14,
+		//13,14,15,
+
+		//////下
+		//16,17,18,
+		//17,18,19,
+
+		//////上
+		//20,21,22,
+		//21,22,23,
+	};
 
 	//頂点データ全体のサイズ = 頂点データ1つ分のサイズ
-	UINT sizeVB = static_cast<UINT>(sizeof(XMFLOAT3) * _countof(vertices));
+	UINT sizeVB = static_cast<UINT>(sizeof(vertices[0]) * _countof(vertices));
 
 	// 頂点バッファの設定
 	D3D12_HEAP_PROPERTIES heapProp{}; // ヒープ設定
@@ -331,7 +383,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(SUCCEEDED(result));
 	//constMapTransform->mat = XMMatrixIdentity();
 	XMMATRIX oldVer = XMMatrixIdentity();
-	
+
 	//constMapTransform->mat.r[0].m128_f32[0] = 2.0f / window_height ;
 	//constMapTransform->mat.r[1].m128_f32[1] = -2.0f / window_width;
 	/*constMapTransform->mat.r[3].m128_f32[0] = -1.0f;
@@ -358,7 +410,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 
 
-	
+
 	//座標
 	XMFLOAT3 scale;
 	XMFLOAT3 rotation;
@@ -367,7 +419,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	scale = { 1.0f,1.0f,1.0f };
 	rotation = { 0.0f,0.0f,0.0f };
 	position = { 0.0f,0.0f,0.0f };
-	
+
 	// 頂点バッファの生成
 	ID3D12Resource* vertBuff = nullptr;
 	result = device->CreateCommittedResource(
@@ -380,11 +432,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(SUCCEEDED(result));
 
 	//インデックスデータ全体のサイズ
-	/*UINT sizeIB = static_cast<UINT>(sizeof(uint16_t) * _countof(indices));*/
+	UINT sizeIB = static_cast<UINT>(sizeof(uint16_t) * _countof(indices));
 
 	// リソース設定
 	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	//resDesc.Width = sizeIB; // 頂点データ全体のサイズ
+	resDesc.Width = sizeIB; // 頂点データ全体のサイズ
 	resDesc.Height = 1;
 	resDesc.DepthOrArraySize = 1;
 	resDesc.MipLevels = 1;
@@ -403,7 +455,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		IID_PPV_ARGS(&indexBuff));
 
 	// GPU上のバッファに対応した仮想メモリ(メインメモリ上)を取得
-	XMFLOAT3* vertMap = nullptr;
+	Vertex* vertMap = nullptr;
 	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
 	assert(SUCCEEDED(result));
 	// 全頂点に対して
@@ -419,8 +471,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	uint16_t* indexMap = nullptr;
 	result = indexBuff->Map(0, nullptr, (void**)&indexMap);
 	// 全インデックスに対して
-	for (int i = 0; i < _countof(vertices); i++) {
-		vertMap[i] = vertices[i]; // 座標をコピー
+	for (int i = 0; i < _countof(indices); i++) {
+		indexMap[i] = indices[i]; // 座標をコピー
 	}
 	// 繋がりを解除
 	indexBuff->Unmap(0, nullptr);
@@ -511,8 +563,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//シェーダリソースビュー設定
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
 	srvDesc.Format = textureResouceDesk.Format;
-	srvDesc.Shader4ComponentMapping = 
-	D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Shader4ComponentMapping =
+		D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = textureResouceDesk.MipLevels;
 
@@ -526,13 +578,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	// 頂点バッファのサイズ
 	vbView.SizeInBytes = sizeVB;
 	// 頂点1つ分のデータサイズ
-	vbView.StrideInBytes = sizeof(XMFLOAT3);
+	vbView.StrideInBytes = sizeof(vertices[0]);
 
 	// インデックバッファビューの作成
 	D3D12_INDEX_BUFFER_VIEW ibView{};
 	ibView.BufferLocation = indexBuff->GetGPUVirtualAddress();
 	ibView.Format = DXGI_FORMAT_R16_UINT;
-	//ibView.SizeInBytes = sizeIB;
+	ibView.SizeInBytes = sizeIB;
 
 
 	ID3DBlob* vsBlob = nullptr; // 頂点シェーダオブジェクト
@@ -599,7 +651,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		D3D12_APPEND_ALIGNED_ELEMENT,
 		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
 	},
-};
+	};
 
 
 	// グラフィックスパイプライン設定
@@ -631,7 +683,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	pipelineDesc2.RasterizerState.CullMode = D3D12_CULL_MODE_NONE; // カリングしない
 	pipelineDesc2.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME; // ポリゴン内塗りつぶし
 
-	
+
 	pipelineDesc.RasterizerState.DepthClipEnable = true; // 深度クリッピングを有効に
 	pipelineDesc2.RasterizerState.DepthClipEnable = true; // 深度クリッピングを有効に
 
@@ -650,7 +702,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	// ブレンドステート
 	pipelineDesc.BlendState.RenderTarget[0].RenderTargetWriteMask
 		= D3D12_COLOR_WRITE_ENABLE_ALL; // RBGA全てのチャンネルを描画
-	
+
 	pipelineDesc2.BlendState.RenderTarget[0].RenderTargetWriteMask
 		= D3D12_COLOR_WRITE_ENABLE_ALL; // RBGA全てのチャンネルを描画
 
@@ -663,7 +715,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	pipelineDesc2.InputLayout.NumElements = _countof(inputLayout);
 
 	// 図形の形状設定
-	pipelineDesc.PrimitiveTopologyType =D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE ;
+	pipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
 	pipelineDesc2.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
@@ -709,7 +761,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//デクスチャレンジスタ0番
 	rootParams[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	rootParams[1].DescriptorTable.pDescriptorRanges = &descriptorRange;
-	rootParams[1].DescriptorTable.NumDescriptorRanges= 1;
+	rootParams[1].DescriptorTable.NumDescriptorRanges = 1;
 	rootParams[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	//定数バッファ1番
@@ -751,10 +803,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ID3D12PipelineState* pipelineState2 = nullptr;
 	result = device->CreateGraphicsPipelineState(&pipelineDesc2, IID_PPV_ARGS(&pipelineState2));
 	assert(SUCCEEDED(result));
-	
+
 	//描画初期化処理ここまで
 
-	
+
 	// ゲームループ
 	while (true) {
 		input->Update();
@@ -768,7 +820,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			break;
 		}
 		// DirectX毎フレーム処理 ここから
-		
+
 		//座標移動処理
 		if (input->key[DIK_UP] || input->key[DIK_DOWN] || input->key[DIK_RIGHT] || input->key[DIK_LEFT])
 		{
@@ -779,7 +831,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 				position.z -= 1.0f;
 			}
 
-			if (input->key[DIK_RIGHT]){
+			if (input->key[DIK_RIGHT]) {
 				position.x += 1.0f;
 			}
 
@@ -788,11 +840,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			}
 		}
 
-		
+
 		//スケール
 		XMMATRIX matScale;
 		matScale = XMMatrixScaling(scale.x, scale.y, scale.z);
-		
+
 
 		//回転
 		XMMATRIX matRot;
@@ -800,12 +852,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		matRot *= XMMatrixRotationZ(XMConvertToRadians(rotation.z));
 		matRot *= XMMatrixRotationX(XMConvertToRadians(rotation.x));
 		matRot *= XMMatrixRotationY(XMConvertToRadians(rotation.y));
-		
+
 
 		//平行移動
 		XMMATRIX matTrans;
 		matTrans = XMMatrixTranslation(position.x, position.y, position.z);
-		
+
 
 		//ワールド変換行列
 		XMMATRIX matWorld;
@@ -813,23 +865,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		matWorld *= matScale;
 		matWorld *= matRot;
 		matWorld *= matTrans;
-		
+
 		//カメラを回転
 		if (input->key[DIK_D] || input->key[DIK_A])
 		{
-			if(input->key[DIK_D]){
+			if (input->key[DIK_D]) {
 				angle += XMConvertToRadians(1.0f);
 			}
 
 			else if (input->key[DIK_A]) {
-				angle -= XMConvertToRadians(1.0f); 
+				angle -= XMConvertToRadians(1.0f);
 			}
 
 			eye.x = -100 * sinf(angle);
 			eye.y = -100 * cosf(angle);
 			matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 		}
-		
+
 		constMapTransform->mat = matWorld * matview * matProjection;
 		// バックバッファの番号を取得(2つなので0番か1番)
 		UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
@@ -849,8 +901,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		// 3.画面クリア R G B A
 		FLOAT clearColor[] = { 0.1f,0.25f, 0.5f,0.0f }; // 青っぽい色
 		commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-	
-		
+
+
 
 		// 4.描画コマンドここから
 		// ビューポート設定コマンド
@@ -884,7 +936,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		// プリミティブ形状の設定コマンド
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // 三角形リスト
 
-		
+
 		// 頂点バッファビューの設定コマンド
 		commandList->IASetVertexBuffers(0, 1, &vbView);
 
@@ -906,12 +958,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 
 		// 描画コマンド
-		//commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0); // 全ての頂点を使って描画
-		
+		commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0); // 全ての頂点を使って描画
+
 		commandList->DrawInstanced(6, 1, 0, 0);
-		
+
 		commandList->DrawInstanced(_countof(vertices), 1, 0, 0);
-	
+
 		// 4.描画コマンドここまで
 
 
