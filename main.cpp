@@ -84,7 +84,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ID3D12GraphicsCommandList* commandList = nullptr;
 	ID3D12CommandQueue* commandQueue = nullptr;
 	ID3D12DescriptorHeap* rtvHeap = nullptr;
-
+	float r = 1.0f;
+	float g = 0.0f;
 	// DXGIファクトリーの生成
 	result = CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory));
 	assert(SUCCEEDED(result));
@@ -228,12 +229,59 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	//描画初期化処理ここから
 	
-	//頂点データ
-	XMFLOAT3 vertices[] = {
-		{ -0.5f,-0.5f, 0.0f },
-		{ -0.5f,+0.5f, 0.0f },
-		{ +0.5f,-0.5f, 0.0f },
+	struct Vertex
+	{
+		XMFLOAT3 pos;
+		XMFLOAT3 normal;
+		XMFLOAT2 uv;
 	};
+
+	struct  ConstBufferDataMaterial
+	{
+		XMFLOAT4 color;
+
+	};
+
+	struct  ConstBufferDataTransform
+	{
+		XMMATRIX mat;
+	};
+
+
+	D3D12_HEAP_PROPERTIES cbHeapProp{}; // ヒープ設定
+	cbHeapProp.Type = D3D12_HEAP_TYPE_UPLOAD; // GPUへの転送用
+	// リソース設定
+	D3D12_RESOURCE_DESC cbResorceDesc{};
+	cbResorceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	cbResorceDesc.Width = (sizeof(ConstBufferDataMaterial) + 0xff) & ~0xff;
+	cbResorceDesc.Height = 1;
+	cbResorceDesc.DepthOrArraySize = 1;
+	cbResorceDesc.MipLevels = 1;
+	cbResorceDesc.SampleDesc.Count = 1;
+	cbResorceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	{
+		D3D12_HEAP_PROPERTIES cbHeapProp{}; // ヒープ設定
+		cbHeapProp.Type = D3D12_HEAP_TYPE_UPLOAD; // GPUへの転送用
+		// リソース設定
+		D3D12_RESOURCE_DESC cbResorceDesc{};
+		cbResorceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		cbResorceDesc.Width = (sizeof(ConstBufferDataMaterial) + 0xff) & ~0xff;
+		cbResorceDesc.Height = 1;
+		cbResorceDesc.DepthOrArraySize = 1;
+		cbResorceDesc.MipLevels = 1;
+		cbResorceDesc.SampleDesc.Count = 1;
+		cbResorceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	}
+	
+	//頂点データ
+	//前
+	XMFLOAT3 vertices[] = {
+		{ -5.0f, -5.0f, 0.0f },//右下
+		{ -5.0f, +5.0f, 0.0f },//右上
+		{ +5.0f, -5.0f, 0.0f },//左下	
+	};
+
 
 	//頂点データ全体のサイズ = 頂点データ1つ分のサイズ
 	UINT sizeVB = static_cast<UINT>(sizeof(XMFLOAT3) * _countof(vertices));
@@ -251,6 +299,77 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	resDesc.SampleDesc.Count = 1;
 	resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
+	ID3D12Resource* constBuffMaterial = nullptr;
+
+	result = device->CreateCommittedResource(
+		&cbHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&cbResorceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&constBuffMaterial));
+	assert(SUCCEEDED(result));
+
+	ConstBufferDataMaterial* constMapMaterial = nullptr;
+	result = constBuffMaterial->Map(0, nullptr, (void**)&constMapMaterial);
+	assert(SUCCEEDED(result));
+
+	//5-2
+	ID3D12Resource* constBuffTransform = nullptr;
+	//定数バッファの生成
+	result = device->CreateCommittedResource(
+		&cbHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&cbResorceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&constBuffTransform));
+	assert(SUCCEEDED(result));
+
+	//定数バッファのマッピング
+	ConstBufferDataTransform* constMapTransform = nullptr;
+	result = constBuffTransform->Map(0, nullptr, (void**)&constMapTransform);
+	assert(SUCCEEDED(result));
+	//constMapTransform->mat = XMMatrixIdentity();
+	XMMATRIX oldVer = XMMatrixIdentity();
+
+	//constMapTransform->mat.r[0].m128_f32[0] = 2.0f / window_height ;
+	//constMapTransform->mat.r[1].m128_f32[1] = -2.0f / window_width;
+	/*constMapTransform->mat.r[3].m128_f32[0] = -1.0f;
+	constMapTransform->mat.r[3].m128_f32[1] = 1.0f;*/
+
+	constMapTransform->mat = XMMatrixOrthographicOffCenterLH(
+		2.0f, -2.0f,
+		2.0f, -2.0f,
+		0.0f, 1.0f);
+
+	//射影変換行列(透視投影)
+	XMMATRIX matProjection = XMMatrixPerspectiveFovLH(
+		XMConvertToRadians(45.0f),
+		(float)window_height / window_width,
+		0.1f, 1000.0f
+	);
+
+	//ビュー変換行列
+	XMMATRIX matview;
+	XMFLOAT3 eye(0, 0, -100);
+	XMFLOAT3 target(0, 0, 0);
+	XMFLOAT3 up(0, 1, 0);
+	float angle = 0.0f;//カメラの回転角
+	matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+
+
+
+	//座標
+	XMFLOAT3 scale;
+	XMFLOAT3 rotation;
+	XMFLOAT3 position;
+
+	scale = { 1.0f,1.0f,1.0f };
+	rotation = { 0.0f,0.0f,0.0f };
+	position = { 0.0f,0.0f,0.0f };
+	
+
 	// 頂点バッファの生成
 	ID3D12Resource* vertBuff = nullptr;
 	result = device->CreateCommittedResource(
@@ -262,6 +381,27 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		IID_PPV_ARGS(&vertBuff));
 	assert(SUCCEEDED(result));
 
+	//UINT sizeIB = static_cast<UINT>(sizeof(uint16_t) * _countof(indices));
+
+	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	resDesc.Width = sizeVB; // 頂点データ全体のサイズ
+	resDesc.Height = 1;
+	resDesc.DepthOrArraySize = 1;
+	resDesc.MipLevels = 1;
+	resDesc.SampleDesc.Count = 1;
+	resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	// インデックスバッファの生成
+	ID3D12Resource* indexBuff = nullptr;
+	result = device->CreateCommittedResource(
+		&heapProp, // ヒープ設定
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc, // リソース設定
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&indexBuff));
+
+	
 	// GPU上のバッファに対応した仮想メモリ(メインメモリ上)を取得
 	XMFLOAT3* vertMap = nullptr;
 	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
@@ -273,6 +413,71 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	// 繋がりを解除
 	vertBuff->Unmap(0, nullptr);
 
+	
+
+	//SRVの最大個数
+	const size_t kMaxSRVCount = 2056;
+
+	//デスクリプタヒープの設定
+	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	srvHeapDesc.NumDescriptors = kMaxSRVCount;
+
+	//設定を元にSRV用デスクリプタヒープを生成
+	ID3D12DescriptorHeap* srvHeap = nullptr;
+	result = device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&srvHeap));
+	assert(SUCCEEDED(result));
+
+	//SRVヒープの先頭ハンドルを取得
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = srvHeap->GetCPUDescriptorHandleForHeapStart();
+
+
+	//深度バッファのリソース設定
+	D3D12_RESOURCE_DESC depthResouceDesc{};
+	depthResouceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	depthResouceDesc.Width = window_width;
+	depthResouceDesc.Height = window_height;
+	depthResouceDesc.DepthOrArraySize = 1;
+	depthResouceDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	depthResouceDesc.SampleDesc.Count = 1;
+	depthResouceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	//深度値用ヒーププロパティ
+	D3D12_HEAP_PROPERTIES depthHeapProp{};
+	depthHeapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+	//深度値のクリア設定
+	D3D12_CLEAR_VALUE depthClearValue{};
+	depthClearValue.DepthStencil.Depth = 1.0f;
+	depthClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+
+	//深度バッファのリソース生成
+	ID3D12Resource* depthBuff = nullptr;
+	result = device->CreateCommittedResource(
+		&depthHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&depthResouceDesc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&depthClearValue,
+		IID_PPV_ARGS(&depthBuff));
+
+	//深度ビュー用デスクリプタヒープ作成
+	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesk{};
+	dsvHeapDesk.NumDescriptors = 1;
+	dsvHeapDesk.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	ID3D12DescriptorHeap* dsvHeap = nullptr;
+	result = device->CreateDescriptorHeap(&dsvHeapDesk, IID_PPV_ARGS(&dsvHeap));
+
+	//深度ビュー作成
+	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	device->CreateDepthStencilView(
+		depthBuff,
+		&dsvDesc,
+		dsvHeap->GetCPUDescriptorHandleForHeapStart());
+
 	// 頂点バッファビューの作成
 	D3D12_VERTEX_BUFFER_VIEW vbView{};
 	// GPU仮想アドレス
@@ -280,12 +485,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	// 頂点バッファのサイズ
 	vbView.SizeInBytes = sizeVB;
 	// 頂点1つ分のデータサイズ
-	vbView.StrideInBytes = sizeof(XMFLOAT3);
+	vbView.StrideInBytes = sizeof(vertices[0]);
+
+
+	// インデックバッファビューの作成
+	D3D12_INDEX_BUFFER_VIEW ibView{};
+	ibView.BufferLocation = indexBuff->GetGPUVirtualAddress();
+	ibView.Format = DXGI_FORMAT_R16_UINT;
 
 
 	ID3DBlob* vsBlob = nullptr; // 頂点シェーダオブジェクト
 	ID3DBlob* psBlob = nullptr; // ピクセルシェーダオブジェクト
 	ID3DBlob* errorBlob = nullptr; // エラーオブジェクト
+
 	// 頂点シェーダの読み込みとコンパイル
 	result = D3DCompileFromFile(
 		L"BasicVS.hlsl", // シェーダファイル名
@@ -296,19 +508,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		0,
 		&vsBlob, &errorBlob);
 
-	// エラーなら
-	if (FAILED(result)) {
-		// errorBlobからエラー内容をstring型にコピー
-		std::string error;
-		error.resize(errorBlob->GetBufferSize());
-		std::copy_n((char*)errorBlob->GetBufferPointer(),
-			errorBlob->GetBufferSize(),
-			error.begin());
-		error += "\n";
-		// エラー内容を出力ウィンドウに表示
-		OutputDebugStringA(error.c_str());
-		assert(0);
-	}
 
 	// ピクセルシェーダの読み込みとコンパイル
 	result = D3DCompileFromFile(
@@ -333,15 +532,27 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		OutputDebugStringA(error.c_str());
 		assert(0);
 	}
+		// 頂点レイアウト
+		D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
 
-	// 頂点レイアウト
-	D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
-	{
-	"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
-	D3D12_APPEND_ALIGNED_ELEMENT,
-	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
-	}, // (1行で書いたほうが見やすい)
-};
+		{
+			"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
+			D3D12_APPEND_ALIGNED_ELEMENT,
+			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+		},
+
+		{
+			"NORMAL",0,DXGI_FORMAT_R32G32B32_FLOAT,0,
+			D3D12_APPEND_ALIGNED_ELEMENT,
+			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0
+		},
+
+		{
+			"TEXCOORD",0,DXGI_FORMAT_R32G32_FLOAT,0,
+			D3D12_APPEND_ALIGNED_ELEMENT,
+			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+		},
+		};
 
 
 	// グラフィックスパイプライン設定
@@ -360,7 +571,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	// ラスタライザの設定
 	pipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE; // カリングしない
-	pipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME; // ポリゴン内塗りつぶし
+	pipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID; // ポリゴン内塗りつぶし
 	pipelineDesc.RasterizerState.DepthClipEnable = true; // 深度クリッピングを有効に
 
 	// ブレンドステート
@@ -381,11 +592,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	pipelineDesc.SampleDesc.Count = 1; // 1ピクセルにつき1回サンプリング
 
 
+	D3D12_ROOT_PARAMETER rootparam = {};
+	rootparam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	rootparam.Descriptor.ShaderRegister = 0;
+	rootparam.Descriptor.RegisterSpace = 0;
+	rootparam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	// ルートシグネチャ
 	ID3D12RootSignature* rootSignature;
 	// ルートシグネチャの設定
 	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc{};
 	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	rootSignatureDesc.pParameters = &rootparam;
+	rootSignatureDesc.NumParameters = 1;
 	// ルートシグネチャのシリアライズ
 	ID3DBlob* rootSigBlob = nullptr;
 	result = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0,
@@ -424,7 +642,74 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		keyboard->Acquire();
 		BYTE key[256] = {};
 		keyboard->GetDeviceState(sizeof(key), key);
+		r -= 0.01f;
+		g += 0.01f;
 
+		constMapMaterial->color = XMFLOAT4(r, g, 0, 0.5f);
+
+		//カメラを回転
+		if (key[DIK_D] || key[DIK_A])
+		{
+			if (key[DIK_D]) {
+				angle += XMConvertToRadians(1.0f);
+			}
+
+			else if (key[DIK_A]) {
+				angle -= XMConvertToRadians(1.0f);
+			}
+
+			eye.x = -100 * sinf(angle);
+			eye.z = -100 * cosf(angle);
+			matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+		}
+
+
+		////座標移動処理
+		if (key[DIK_UP] || key[DIK_DOWN] || key[DIK_RIGHT] || key[DIK_LEFT])
+		{
+			if (key[DIK_UP]) {
+				position.z += 1.0f;
+			}
+			else if (key[DIK_DOWN]) {
+				position.z -= 1.0f;
+			}
+
+			if (key[DIK_RIGHT]) {
+				position.x += 1.0f;
+			}
+
+			else if (key[DIK_LEFT]) {
+				position.x -= 1.0f;
+			}
+		}
+
+
+		////スケール
+		XMMATRIX matScale;
+		matScale = XMMatrixScaling(scale.x, scale.y, scale.z);
+
+
+		////回転
+		XMMATRIX matRot;
+		matRot = XMMatrixIdentity();
+		matRot *= XMMatrixRotationZ(XMConvertToRadians(rotation.z));
+		matRot *= XMMatrixRotationX(XMConvertToRadians(rotation.x));
+		matRot *= XMMatrixRotationY(XMConvertToRadians(rotation.y));
+
+
+		////平行移動
+		XMMATRIX matTrans;
+		matTrans = XMMatrixTranslation(position.x, position.y, position.z);
+
+
+		////ワールド変換行列
+		XMMATRIX matWorld;
+		matWorld = XMMatrixIdentity();
+		matWorld *= matScale;
+		matWorld *= matRot;
+		matWorld *= matTrans;
+
+		constMapTransform->mat = matWorld * matview * matProjection;
 		// バックバッファの番号を取得(2つなので0番か1番)
 		UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
 		// 1.リソースバリアで書き込み可能に変更
@@ -480,6 +765,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 		// 頂点バッファビューの設定コマンド
 		commandList->IASetVertexBuffers(0, 1, &vbView);
+
+		commandList->SetGraphicsRootConstantBufferView(0, constBuffMaterial->GetGPUVirtualAddress());
 
 		// 描画コマンド
 		commandList->DrawInstanced(_countof(vertices), 1, 0, 0); // 全ての頂点を使って描画
