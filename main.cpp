@@ -215,6 +215,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	//描画初期化処理ここから
 
+	
 	struct Vertex
 	{
 		XMFLOAT3 pos;
@@ -275,7 +276,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	uint16_t indices[] =
 	{
 		0,1,2,
-		1,2,3,
+
 	};
 
 	//頂点データ全体のサイズ = 頂点データ1つ分のサイズ
@@ -425,29 +426,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	// 繋がりを解除
 	indexBuff->Unmap(0, nullptr);
 
+	const size_t textureWidth = 256;
+	const size_t textureHeight = 256;
+	const size_t imageDataCount = textureWidth * textureHeight;
 
+	XMFLOAT4* imageData = new XMFLOAT4[imageDataCount];
 
-	TexMetadata metadata{};
-	ScratchImage scratchImg{};
-
-	result = LoadFromWICFile(
-		L"Resources/botan.png",
-		WIC_FLAGS_NONE,
-		&metadata, scratchImg);
-
-	ScratchImage mipChain{};
-
-	result = GenerateMipMaps(
-		scratchImg.GetImages(), scratchImg.GetImageCount(), scratchImg.GetMetadata(),
-		TEX_FILTER_DEFAULT, 0, mipChain);
-
-	if (SUCCEEDED(result))
+	//全ピクセルの色を初期化
+	for (size_t i = 0; i < imageDataCount; i++)
 	{
-		scratchImg = std::move(mipChain);
-		metadata = scratchImg.GetMetadata();
+		imageData[i].x = 1.0f;
+		imageData[i].y = 0.0f;
+		imageData[i].z = 0.0f;
+		imageData[i].w = 1.0f;
 	}
-
-	metadata.format = MakeSRGB(metadata.format);
 
 	// ヒープ設定
 	D3D12_HEAP_PROPERTIES textureHeapProp{};
@@ -458,11 +450,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	// リソース設定
 	D3D12_RESOURCE_DESC textureResouceDesk{};
 	textureResouceDesk.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	textureResouceDesk.Format = metadata.format;
-	textureResouceDesk.Width = metadata.width;
-	textureResouceDesk.Height = (UINT)metadata.height;
-	textureResouceDesk.DepthOrArraySize = (UINT16)metadata.arraySize;
-	textureResouceDesk.MipLevels = (UINT16)metadata.mipLevels;
+	textureResouceDesk.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	textureResouceDesk.Width = textureWidth;
+	textureResouceDesk.Height = textureHeight;
+	textureResouceDesk.DepthOrArraySize = 1;
+	textureResouceDesk.MipLevels = 1;
 	textureResouceDesk.SampleDesc.Count = 1;
 
 	//テクスチャバッファの生成
@@ -477,18 +469,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 
 	//テクスチャバッファにデータ転送
-	for (size_t i = 0; i < metadata.mipLevels; i++)
-	{
-		const Image* img = scratchImg.GetImage(i, 0, 0);
-		result = texBuff->WriteToSubresource(
-			(UINT)i,
-			nullptr,
-			img->pixels,
-			(UINT)img->rowPitch,
-			(UINT)img->slicePitch
+	result = texBuff->WriteToSubresource(
+		0,
+		nullptr,
+		imageData,
+		sizeof(XMFLOAT4) * textureWidth,
+		sizeof(XMFLOAT4) * imageDataCount
 		);
-		assert(SUCCEEDED(result));
-	}
+	
 
 	//SRVの最大個数
 	const size_t kMaxSRVCount = 2056;
@@ -507,14 +495,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//SRVヒープの先頭ハンドルを取得
 	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = srvHeap->GetCPUDescriptorHandleForHeapStart();
 
-
 	//シェーダリソースビュー設定
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-	srvDesc.Format = textureResouceDesk.Format;
-	srvDesc.Shader4ComponentMapping = 
-	D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	srvDesc.Shader4ComponentMapping =
+		D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = textureResouceDesk.MipLevels;
+	srvDesc.Texture2D.MipLevels = 1;
 
 	//ハンドルの指す位置にシェーダリソースビュー作成
 	device->CreateShaderResourceView(texBuff, &srvDesc, srvHandle);
@@ -826,7 +813,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			}
 
 			eye.x = -100 * sinf(angle);
-			eye.y = -100 * cosf(angle);
+			eye.z = -100 * cosf(angle);
 			matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 		}
 		
