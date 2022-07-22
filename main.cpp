@@ -87,7 +87,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ID3D12GraphicsCommandList* commandList = nullptr;
 	ID3D12CommandQueue* commandQueue = nullptr;
 	ID3D12DescriptorHeap* rtvHeap = nullptr;
-	
+	float r = 1.0f;
+	float timer = 0.0f;
 
 	Keyboard* input = new Keyboard();
 
@@ -311,7 +312,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	result = constBuffMaterial->Map(0, nullptr, (void**)&constMapMaterial);
 	assert(SUCCEEDED(result));
 
-	constMapMaterial->color = XMFLOAT4(1, 0, 0, 0.5f);
+	
 
 
 	//5-2
@@ -332,7 +333,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	assert(SUCCEEDED(result));
 	//constMapTransform->mat = XMMatrixIdentity();
 	XMMATRIX oldVer = XMMatrixIdentity();
-	
+	constMapMaterial->color = XMFLOAT4(1, 0, 0, 0.5f);
 	//constMapTransform->mat.r[0].m128_f32[0] = 2.0f / window_height ;
 	//constMapTransform->mat.r[1].m128_f32[1] = -2.0f / window_width;
 	/*constMapTransform->mat.r[3].m128_f32[0] = -1.0f;
@@ -433,13 +434,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	XMFLOAT4* imageData = new XMFLOAT4[imageDataCount];
 
 	//全ピクセルの色を初期化
+	
+	
 	for (size_t i = 0; i < imageDataCount; i++)
 	{
-		imageData[i].x = 1.0f;
-		imageData[i].y = 0.0f;
+		imageData[i].x = r;
+		imageData[i].y = 1.0f;
 		imageData[i].z = 0.0f;
 		imageData[i].w = 1.0f;
+		r -= timer;
 	}
+
 
 	// ヒープ設定
 	D3D12_HEAP_PROPERTIES textureHeapProp{};
@@ -457,6 +462,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	textureResouceDesk.MipLevels = 1;
 	textureResouceDesk.SampleDesc.Count = 1;
 
+
 	//テクスチャバッファの生成
 	ID3D12Resource* texBuff = nullptr;
 	result = device->CreateCommittedResource(
@@ -466,7 +472,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&texBuff));
-
+	
 
 	//テクスチャバッファにデータ転送
 	result = texBuff->WriteToSubresource(
@@ -744,6 +750,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	
 	// ゲームループ
 	while (true) {
+		timer += 1;
 		input->Update();
 		// メッセージがある?
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
@@ -754,7 +761,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		if (msg.message == WM_QUIT) {
 			break;
 		}
-		// DirectX毎フレーム処理 ここから
 		
 		//座標移動処理
 		if (input->key[DIK_UP] || input->key[DIK_DOWN] || input->key[DIK_RIGHT] || input->key[DIK_LEFT])
@@ -775,7 +781,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			}
 		}
 
-		
+	
 		//スケール
 		XMMATRIX matScale;
 		matScale = XMMatrixScaling(scale.x, scale.y, scale.z);
